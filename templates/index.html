@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Principal - Solicitação de Toner</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <header>
+        <!-- Coloque este bloco logo após a abertura do <body> -->
+        <div class="logoff-container">
+            <form action="{{ url_for('logout') }}" method="post">
+                <button type="submit" class="logoff-button">
+                    <span class="logoff-icon"><!-- Ícone aqui --></span>
+                    Sair
+                </button>
+            </form>
+        </div>
+    </header>
+    <div class="background-image"></div>
+    
+    <!-- Container do Menu -->
+    <div class="menu-container">
+        <!-- Placeholder para a logo da empresa -->
+        <div class="logo">
+            <img src="/static/images/logo.png" alt="Logo da Empresa">
+        </div>
+        
+        <h1 class="menu-title">Solicitação de Toner</h1>
+        
+        <!-- Botões do menu -->
+        <div class="menu-options">
+            <button onclick="window.location.href='/solicitar'">Solicitar Toner</button>
+            <button onclick="window.location.href='/meus_pedidos'">Meus Pedidos</button>
+            <div>
+                <!-- Botão de Administração para administradores -->
+                    {% if session['user'] in ['Bruno Ricardo Marcondes', 'Acyr Giovani Martins', 'Claudiney Valente de Andrade', 'Vinicius Muller', 'Walmir Stanula'] %}
+                    <button onclick="window.location.href='/admin'">Administração</button>
+                    {% endif %}
+            </div>
+        </div>
+    </div>
+    <script>
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    Swal.fire({
+                        icon: '{{ 'error' if category == 'danger' else 'success' }}',
+                        title: '{{ message | escape }}',
+                        showConfirmButton: false,
+                        timer: 5000
+                    });
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+    <span class="versao-site">{{ versao }}</span>
+</body>
+</html>

@@ -1,0 +1,44 @@
+stages:
+  - build
+  - update-k8s
+
+build:
+  stage: build
+  tags:
+    - local-runner
+  script:
+    |
+        $VERSION = Get-Content VERSION
+        Write-Host "Building version: $VERSION"
+        docker login -u "$env:CI_REGISTRY_USER" -p "$env:CI_REGISTRY_PASSWORD" "$env:CI_REGISTRY"
+        docker build -t "$env:CI_REGISTRY_IMAGE`:$VERSION" -t "$env:CI_REGISTRY_IMAGE`:latest" .
+        docker push "$env:CI_REGISTRY_IMAGE`:$VERSION"
+        docker push "$env:CI_REGISTRY_IMAGE`:latest"
+  only:
+    - main
+
+update-k8s:
+  stage: update-k8s
+  tags:
+    - local-runner
+  before_script:
+    - $env:GIT_CREDENTIALS = "https://oauth2:$env:GITLAB_PAT@gitlab.com/bom-jesus/k8s-config.git"
+    - $env:VERSION = Get-Content VERSION
+  script:
+    - |
+      git clone $env:GIT_CREDENTIALS
+      cd k8s-config
+      
+      # Atualiza a tag da imagem no arquivo YAML
+      $imageName = "$env:CI_REGISTRY_IMAGE`:$env:VERSION"
+      $content = Get-Content flask-deployment.yaml -Raw
+      $updatedContent = $content -replace 'image: .*', "image: $imageName"
+      Set-Content flask-deployment.yaml -Value $updatedContent -NoNewline
+      
+      git config --global user.email "ci@gitlab.com"
+      git config --global user.name "GitLab CI"
+      git add flask-deployment.yaml
+      git commit -m "Atualizando imagem para versão $env:VERSION (commit $env:CI_COMMIT_SHORT_SHA)"
+      git push origin main
+  only:
+    - main

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Principal - Solicitação de Toner</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div class="background-image"></div>
+        <!-- Container do Menu -->
+    <div class="menu-container-admin">
+        <!-- Placeholder para a logo da empresa -->
+        <div class="logo">
+            <img src="/static/images/logo.png" alt="Logo da Empresa">
+        </div>
+
+        <!-- Placeholder para o icone admin -->
+        <div class="logo_admin">
+            <img src="/static/images/admin.png" alt="">
+        </div>
+        
+        <h1 class="menu-title">Administração</h1>
+        
+        <!-- Botões do menu -->
+        <div class="menu-options">
+            <button onclick="window.location.href='/dashboard'">Dashboard</button>
+            <button onclick="window.location.href='/admin_pedidos'">Pedidos</button>
+            <button onclick="window.location.href='/estoque'">Estoque</button>
+        </div>
+        <!-- Botão para voltar à página inicial -->
+        <div class="home-button">
+            <a href="/">
+                <img src="/static/images/home-icon.png" alt="Página Inicial">
+            </a>
+        </div>
+    </div>
+    <script>
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    Swal.fire({
+                        icon: '{{ 'error' if category == 'danger' else 'success' }}',
+                        title: '{{ message | escape }}',
+                        showConfirmButton: false,
+                        timer: 5000
+                    });
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

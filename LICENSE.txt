@@ -1,0 +1,11 @@
+# Direitos Autorais e Licença de Uso
+
+Este software foi desenvolvido por Vinicius Muller Stawicki de forma independente, sem solicitação ou compensação por parte da Cooperativa Agroindustrial Bom Jesus.
+
+Está sendo cedido para uso interno da empresa, sem transferência de propriedade intelectual ou direitos autorais.
+
+Todos os direitos sobre o código-fonte permanecem com o autor.
+
+Qualquer reprodução, modificação ou redistribuição fora da empresa deve ser autorizada por escrito.
+
+Contato: viniciusm39@hotmail.com

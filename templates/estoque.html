@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estoque de Toners</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert -->
+    <style>
+        /* Estilos para o painel de estoque */
+        .painel-estoque {
+            width: 100%;
+            max-width: 600px;
+            background-color: #dddddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .painel-estoque h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .canon {text-decoration-line: underline; text-decoration-thickness: 2px;}
+        .xerox-ciano {text-decoration-line: underline; text-decoration-thickness: 2px; text-decoration-color: cyan}
+        .xerox-magenta {text-decoration-line: underline; text-decoration-thickness: 2px; text-decoration-color: magenta}
+        .xerox-yellow {text-decoration-line: underline; text-decoration-thickness: 2px; text-decoration-color: yellow}
+        .xerox-black {text-decoration-line: underline; text-decoration-thickness: 2px;}
+        .hp {text-decoration-line: underline; text-decoration-thickness: 2px;}
+
+        .painel-estoque p {
+            font-size: 18px;
+            color: black;
+            text-shadow: 1px 1px 10px black;
+        }
+
+        /* Botões abaixo do painel */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .action-button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .history-button {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .action-button:hover {
+            opacity: 0.9;
+        }
+
+        /* Estilos do popup */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .popup-content h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .popup-content input, .popup-content select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .popup-content button {
+            padding: 10px 15px;
+            font-size: 14px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .popup-content .confirm-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .popup-content .cancel-button {
+            background-color: #d9534f;
+            color: white;
+        }
+
+        /* Popup de histórico */
+        .popup-content-historico {
+            width: 500px;
+        }
+
+        .popup-content-historico table {
+            width: 100%;
+            border-collapse: collapse;
+            max-height: 300px; /* Altura máxima para a tabela */
+            overflow-y: auto; /* Rolagem vertical */
+            display: block; /* Para ativar a rolagem */
+        }
+
+        .popup-content-historico th, .popup-content-historico td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* Adiciona barra de rolagem apenas quando necessário */
+        .tabela-scroll {
+            overflow-y: auto;
+            max-height: 300px; /* Altura máxima para o histórico */
+        }
+    </style>
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="menu-container-pedidos">
+        <h1 class="menu-title">Estoque de Toners</h1>
+
+        <!-- Painel de estoque -->
+        <div class="painel-estoque">
+            <h2>Toners Disponíveis</h2>
+            <!-- Loop para exibir os dados de toner no painel -->
+            {% for item in estoque %}
+                {% if item.impressora == "Canon 1643IF" %}
+                    <p class="canon">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% elif item.impressora == "Xerox C7030 Ciano" %}
+                    <p class="xerox-ciano">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% elif item.impressora == "Xerox C7030 Magenta" %}
+                    <p class="xerox-magenta">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% elif item.impressora == "Xerox C7030 Yellow" %}
+                    <p class="xerox-yellow">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% elif item.impressora == "Xerox C7030 Black" %}
+                    <p class="xerox-black">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% elif item.impressora == "HP M401N" %}
+                    <p class="hp">{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% else %}
+                    <p>{{ item.impressora }}: {{ item.quantidade }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Botões de ação -->
+        <div class="action-buttons">
+            <button class="action-button add-button" onclick="openAddTonnerPopup()">Adicionar Tonners</button>
+            <button class="action-button history-button" onclick="abrirHistorico()">Histórico</button>
+        </div>
+
+        <!-- Popup de adicionar tonners -->
+        <div class="popup-overlay" id="popup-add">
+            <div class="popup-content">
+                <h3>Adicionar Tonners</h3>
+                <select id="impressora-select">
+                    <option value="" disabled selected>Selecione a Impressora</option>
+                    <option value="1">Canon 1643IF</option>
+                    <option value="2">Xerox C7030 Ciano</option>
+                    <option value="3">Xerox C7030 Magenta</option>
+                    <option value="4">Xerox C7030 Yellow</option>
+                    <option value="5">Xerox C7030 Black</option>
+                    <option value="6">HP M401N</option>
+                </select>
+                <input type="number" id="quantidade-input" placeholder="Quantidade">
+                <button class="confirm-button" onclick="adicionarTonner()">Confirmar</button>
+                <button class="cancel-button" onclick="closePopup('popup-add')">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Popup de histórico -->
+        <div class="popup-overlay" id="historico-popup">
+            <div class="popup-content popup-content-historico">
+                <h3>Histórico de Entrada de Tonners</h3>
+                <div class="tabela-scroll">
+                    <table id="tabela-historico">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>                           
+                                <th>Impressora</th>
+                                <th>Quantidade</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- As linhas da tabela serão inseridas dinamicamente via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <button class="cancel-button" onclick="closePopup('historico-popup')">Fechar</button>
+            </div>
+        </div>
+
+        <div class="home-button">
+            <a href="/admin">
+                <img src="static/images/home-icon.png" alt="Página Inicial">
+            </a>
+        </div>
+        
+        <!-- Botão de atualizar página -->
+        <div class="update-button">
+            <img src="/static/images/update-icon.png" alt="Atualizar Página" onclick="atualizarPagina()">
+        </div>
+    </div>
+
+    <script>
+        // Função para atualizar a página após 5 segundos
+        function atualizarPagina() {
+            setTimeout(function() {
+                location.reload(); // Atualiza a página
+            }, 1500);
+        }
+
+        // Função para abrir popup de adicionar tonners
+        function openAddTonnerPopup() {
+            document.getElementById('popup-add').style.display = 'flex';
+        }
+
+        // Função para fechar popups
+        function closePopup(popupId) {
+            document.getElementById(popupId).style.display = 'none';
+        }
+
+        // Função para abrir o histórico
+        function abrirHistorico() {
+            fetch('/historico_estoque', {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                var tabelaHistorico = document.getElementById('tabela-historico').getElementsByTagName('tbody')[0];
+                tabelaHistorico.innerHTML = '';  // Limpa a tabela antes de preencher os novos dados
+
+                data.forEach(function(entrada) {
+                    var row = tabelaHistorico.insertRow();
+                    row.insertCell(0).innerHTML = entrada.Usuario;
+                    row.insertCell(1).innerHTML = entrada.impressora;
+                    row.insertCell(2).innerHTML = entrada.quantidade;
+                    row.insertCell(3).innerHTML = entrada.data_entrada;
+                });
+
+                document.getElementById('historico-popup').style.display = 'flex';
+            })
+            .catch(error => {
+                console.error('Erro ao buscar o histórico:', error);
+                alert('Erro ao carregar o histórico.');
+            });
+        }
+
+        // Função para adicionar tonner
+        function adicionarTonner() {
+            // Obtém os valores do formulário
+            var impressora = document.getElementById('impressora-select').value;
+            var quantidade = document.getElementById('quantidade-input').value;
+
+            if (impressora && quantidade) {
+                // Envia a requisição para adicionar tonner
+                fetch('/adicionar_tonner', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ impressora: impressora, quantidade: quantidade })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Sucesso!', 'Tonner adicionado com sucesso!', 'success').then(() => {
+                        atualizarPagina(); // Inicia a contagem para atualizar a página
+                        });
+                    } else {
+                        Swal.fire('Erro!', 'Não foi possível adicionar o tonner: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao adicionar tonner:', error);
+                    Swal.fire('Erro!', 'Erro ao adicionar tonner.', 'error');
+                });
+            } else {
+                Swal.fire('Atenção!', 'Por favor, preencha todos os campos.', 'warning');
+            }
+        }
+    </script>
+</body>
+</html>

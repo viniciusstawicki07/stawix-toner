@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitar Toner</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script>
+function atualizarSetor() {
+    const entrepostoId = document.getElementById('entreposto').value;
+    const setorSelect = document.getElementById('setor');
+    const impressora = document.getElementById('modelo');
+
+    // Limpa setor e impressora
+    setorSelect.innerHTML = "";
+    impressora.innerHTML = "";
+
+    // Se entreposto for diferente de 1 e 3, desativa setor e define valor padrão 15
+    if (entrepostoId !== "1" && entrepostoId !== "3") {
+        setorSelect.innerHTML = '<option value="15">Padrão</option>';
+        setorSelect.disabled = true;
+
+        // Define a impressora padrão Canon 1643IF
+        const option = document.createElement('option');
+        option.value = "1";
+        option.textContent = "Canon 1643IF";
+        impressora.appendChild(option);
+        return;
+    }
+
+    // Caso contrário, habilita setor e busca opções via API
+    setorSelect.innerHTML = '<option value="">Carregando...</option>';
+    setorSelect.disabled = true;
+
+    fetch(`/get_setores/${entrepostoId}`)
+        .then(response => response.json())
+        .then(data => {
+            setorSelect.innerHTML = '<option value="">Selecione o Setor</option>';
+            data.forEach(setor => {
+                const option = document.createElement('option');
+                option.value = setor.id;
+                option.textContent = setor.setor;
+                setorSelect.appendChild(option);
+            });
+            setorSelect.disabled = false;
+            atualizarImpressoras(); // atualiza impressoras com novo setor
+        });
+}
+
+        function atualizarImpressoras() {
+            var entreposto = document.getElementById('entreposto').value;
+            var setor = document.getElementById('setor').value;
+            var impressora = document.getElementById('modelo');
+            var impressoraOptions = {
+                "default": [{"id": "1", "name": "Canon 1643IF"}],
+                "01_TI": [{"id": "2", "name": "Xerox C7030 Ciano"}, {"id": "3", "name": "Xerox C7030 Magenta"},
+                          {"id": "4", "name": "Xerox C7030 Yellow"}, {"id": "5", "name": "Xerox C7030 Black"}],
+                "10_BarracaoAdubo": [{"id": "6", "name": "HP M401N"}]
+            };
+            
+            impressora.innerHTML = ""; // Limpa as opções anteriores
+
+            if (entreposto === "1" && setor === "1") {  // Entreposto "01 - Sede" e Setor "TI"
+                impressoraOptions["01_TI"].forEach(function(option) {
+                    var opt = document.createElement('option');
+                    opt.value = option.id;
+                    opt.innerHTML = option.name;
+                    impressora.appendChild(opt);
+                });
+            } else if (entreposto === "1" && setor === "10") {  // Entreposto "01 - Sede" e Setor "Barracão de Adubos"
+                impressoraOptions["10_BarracaoAdubo"].forEach(function(option) {
+                    var opt = document.createElement('option');
+                    opt.value = option.id;
+                    opt.innerHTML = option.name;
+                    impressora.appendChild(opt);
+                });
+            } else {  // Caso contrário, exibe a opção default
+                impressoraOptions["default"].forEach(function(option) {
+                    var opt = document.createElement('option');
+                    opt.value = option.id;
+                    opt.innerHTML = option.name;
+                    impressora.appendChild(opt);
+                });
+            }
+        }
+
+        // Função para confirmar o envio do pedido
+        function confirmarEnvio(event) {
+            event.preventDefault(); // Impede o envio automático do formulário
+    
+            Swal.fire({
+                title: 'Confirmar Pedido?',
+                text: "Tem certeza que deseja enviar o pedido?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sim, enviar!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Envia o formulário após confirmação
+                    document.getElementById('solicitar-toner-form').submit();
+                }
+            });
+        }
+
+    function enforceMinMax(el) {
+        if (el.value != "") {
+            if (parseInt(el.value) < parseInt(el.min)) {
+                el.value = el.min;
+            }
+            if (parseInt(el.value) > parseInt(el.max)) {
+                el.value = el.max;
+            }
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const entrepostoSelect = document.getElementById('entreposto');
+        const setorSelect = document.getElementById('setor');
+
+        function updateSetorField() {
+            const selectedEntreposto = entrepostoSelect.value;
+
+            if (selectedEntreposto !== '1' && selectedEntreposto !== '3') {
+                setorSelect.value = '15'; // Define o valor padrão como 15
+                setorSelect.disabled = true; // Desabilita o campo setor
+            } else {
+                setorSelect.disabled = false; // Habilita o campo setor
+            }
+        }
+
+        // Atualiza o campo setor ao carregar a página
+        updateSetorField();
+
+        // Atualiza o campo setor ao mudar o entreposto
+        entrepostoSelect.addEventListener('change', updateSetorField);
+    });
+</script>
+    </script>
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="menu-container">
+        <div class="logo">
+            <img src="/static/images/logo.png" alt="Logo da Empresa" class="logo">
+        </div>
+        <h1>Solicitar Toner</h1>
+        <form id="solicitar-toner-form" action="/solicitar" method="POST">
+            <label for="nome">Nome:</label>
+            <input class="input_field" type="text" id="nome" name="nome" value="{{ user }}" readonly required>
+
+            <label for="entreposto">Entreposto:</label>
+            <select class="input_field" id="entreposto" name="entreposto" onchange="atualizarSetor()" required>
+                <option value="">Selecione o Entreposto</option>
+                {% for entreposto in entrepostos_visiveis %}
+                    <option value="{{ entreposto.id }}">{{ entreposto.entreposto }}</option>
+                {% endfor %}
+            </select>
+            
+            <label for="setor">Setor:</label>
+            <select class="input_field" id="setor" name="setor" onchange="atualizarImpressoras()" disabled required>
+                <option value="">Selecione o Setor</option>
+                {% for setor in setores_visiveis %}
+                    <option value="{{ setor.id }}">{{ setor.setor }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="modelo">Modelo:</label>
+            <select class="input_field" id="modelo" name="modelo" required>
+                <option value="">Selecione o Modelo</option>
+            </select>
+
+            <fieldset>
+                <legend>Quantidade de Toner:</legend>
+                <div class="radio-group" style="display: flex; gap: 30px; align-items: center; justify-content: center;">
+                    <div style="display: flex; align-items: center;">
+                        <input type="radio" id="quantidade1" name="quantidade" value="1" required checked>
+                        <label for="quantidade1" style="margin-left: 5px;">1</label>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <input type="radio" id="quantidade2" name="quantidade" value="2" required>
+                        <label for="quantidade2" style="margin-left: 5px;">2</label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- O botão agora chama a função confirmarEnvio ao ser clicado -->
+            <button class="submit-button" type="submit" onclick="confirmarEnvio(event)">Enviar Pedido</button>
+
+        </form>
+        <div class="home-button">
+            <a href="/">
+                <img src="static/images/home-icon.png" alt="Pagina Inicial">
+            </a>
+        </div>
+    </div>
+</body>
+</html>

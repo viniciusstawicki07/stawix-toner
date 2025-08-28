@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Pedidos</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script>
+        // Removida a função cancelarPedido
+        // Removida a função atualizarPagina
+    </script>
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="menu-container-pedidos">
+        <h1 class="menu-title">Meus Pedidos</h1>
+
+        <!-- Contêiner para barra de rolagem -->
+        <div class="tabela-container">
+            <table class="pedidos-tabela">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Entreposto</th>
+                        <th>Setor</th>
+                        <th>Impressora</th>
+                        <th>Quantidade</th>
+                        <th>Status</th>
+                        <th>Data do Pedido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pedido in pedidos %}
+                    <tr>
+                        <td>{{ pedido.pedido_id }}</td>
+                        <td>{{ pedido.nomeFunc }}</td>
+                        <td>{{ pedido.Entreposto }}</td>
+                        <td>{{ pedido.Setor }}</td>
+                        <td>{{ pedido.Impressora }}</td>
+                        <td>{{ pedido.Quantidade }}</td>
+                        <td class="status-{{ pedido.Status | lower }}">
+                            {% if pedido.Status == 'Não Enviado' %}
+                                <span style="color: red;">Não enviado</span>
+                            {% elif pedido.Status == 'Enviado' %}
+                                <span style="color: green;">Enviado</span>
+                            {% elif pedido.Status == 'Cancelado' %}
+                                <span style="color: gray;">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ pedido.data_pedido }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Botão para voltar à página inicial -->
+        <div class="home-button">
+            <a href="/">
+                <img src="/static/images/home-icon.png" alt="Página Inicial">
+            </a>
+        </div>
+    </div>
+</body>
+</html>
