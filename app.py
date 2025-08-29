@@ -952,11 +952,23 @@ def dados_meus_pedidos():
     ]
     params = list(regras["entrepostos"]) + list(regras["setores"])
     
-    # Adicionar filtros das colunas
+    global_search_value = request.args.get('search[value]')
+    if global_search_value:
+        search_term = f"%{global_search_value}%"
+        global_where = " OR ".join([f"{col} LIKE %s" for col in ['nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Status']])
+        where_clauses.append(f"({global_where})")
+        params.extend([search_term] * 5)
+
+    # Adicionar filtros das colunas (LÓGICA CORRIGIDA)
     for i in range(len(column_map)):
         search_value = request.args.get(f'columns[{i}][search][value]')
         if search_value:
-            if search_value.startswith('^') and search_value.endswith('$'):
+            if '|' in search_value: # CORREÇÃO: Adicionado para lidar com filtros de checkbox
+                parts = [p.strip('^$') for p in search_value.split('|')]
+                placeholders = ', '.join(['%s'] * len(parts))
+                where_clauses.append(f"{column_map[i]} IN ({placeholders})")
+                params.extend(parts)
+            elif search_value.startswith('^') and search_value.endswith('$'):
                 where_clauses.append(f"{column_map[i]} = %s")
                 params.append(search_value.strip('^$'))
             else:

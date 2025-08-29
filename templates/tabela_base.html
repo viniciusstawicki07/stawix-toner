@@ -15,14 +15,7 @@
             display: flex; flex-direction: column; margin: 20px auto;
             padding: 24px 32px; background-color: #fff; border-radius: 16px;
             box-shadow: 0 6px 30px rgba(36, 88, 68, 0.12);
-        }
-        /* CORREÇÃO CRÍTICA: Permite que os popups fiquem visíveis */
-        .table-wrapper {
-            flex-grow: 1;
-            overflow: visible; 
-        }
-        #tabela-pedidos_wrapper {
-            overflow: visible;
+            position: relative; /* Essencial para o novo posicionamento do popup */
         }
 
         /* --- ESTILO DA TABELA DATATABLES --- */
@@ -32,7 +25,7 @@
         #tabela-pedidos_wrapper table.dataTable thead th {
             background-color: #245844; color: #fff; font-weight: 500;
             padding: 12px 15px; border-bottom: 2px solid #fade3f;
-            white-space: nowrap; position: relative; 
+            white-space: nowrap; position: relative;
         }
         #tabela-pedidos_wrapper table.dataTable tbody td {
             padding: 10px 15px; border-bottom: 1px solid #eef0f5;
@@ -51,8 +44,9 @@
         .filter-btn img { width: 16px; height: 16px; }
 
         .filter-popup {
-            display: none; position: absolute; top: 100%;
-            left: 0; z-index: 1000; background: #fff; /* z-index aumentado */
+            display: none; position: absolute; /* Agora posicionado em relação ao menu-container-pedidos */
+            left: 0; z-index: 1100;
+            background: #fff;
             border: 1px solid #ccc; border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             padding: 15px; min-width: 280px; margin-top: 5px;
@@ -105,28 +99,24 @@
                             <button class="filter-btn" data-filter="nomeFunc">
                                 <img src="/static/images/sort_icon.png" alt="Pesquisar">
                             </button>
-                            <div class="filter-popup" id="filter-popup-nomeFunc"></div>
                         </th>
                         <th>
                             Entreposto
                             <button class="filter-btn" data-filter="Entreposto">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
-                            <div class="filter-popup" id="filter-popup-Entreposto"></div>
                         </th>
                         <th>
                             Setor
                             <button class="filter-btn" data-filter="Setor">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
-                            <div class="filter-popup" id="filter-popup-Setor"></div>
                         </th>
                         <th>
                             Impressora
                             <button class="filter-btn" data-filter="Impressora">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
-                            <div class="filter-popup" id="filter-popup-Impressora"></div>
                         </th>
                         <th>Qtd</th>
                         <th>
@@ -134,7 +124,6 @@
                             <button class="filter-btn" data-filter="Status">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
-                            <div class="filter-popup" id="filter-popup-Status"></div>
                         </th>
                         <th>Data Pedido</th>
                         {% if is_admin %}
@@ -147,6 +136,7 @@
         <div class="home-button">
             <a href="{% block home_link %}{% endblock %}"><img src="/static/images/home-icon.png" alt="Página Inicial"></a>
         </div>
+        <div class="filter-popup" id="the-filter-popup"></div>
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
@@ -154,4 +144,3 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
-

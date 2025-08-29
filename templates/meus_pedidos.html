@@ -37,20 +37,42 @@
         // --- LÓGICA DOS FILTROS POP-UP ---
         let activeFilters = {};
         let filterOptions = {};
+        let filtersLoaded = false;
+        const popup = $('#the-filter-popup');
+
         fetch("{{ url_for('get_filter_options') }}")
             .then(response => response.json())
-            .then(data => filterOptions = data);
+            .then(data => {
+                filterOptions = data;
+                filtersLoaded = true;
+            });
 
-        function renderFilterPopup(columnName) {
-            const popup = $(`#filter-popup-${columnName}`);
+        function renderFilterPopup(columnName, button) {
             popup.empty();
+
+            if (!filtersLoaded) {
+                popup.append('<h4>Carregando...</h4>');
+                return;
+            }
+
             if (columnName === 'nomeFunc') {
                 popup.append(`<h4>Pesquisar por Nome</h4>`);
                 popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}" placeholder="Digite um nome...">`);
             } else {
                 popup.append(`<h4>Filtrar por ${columnName}</h4>`);
                 const optionsDiv = $('<div class="filter-options"></div>');
-                const optionsKey = columnName.toLowerCase() === 'status' ? 'status' : columnName.toLowerCase() + 's';
+
+                // CORREÇÃO: Lógica para encontrar a chave correta (ex: 'setores')
+                let optionsKey;
+                const lowerColumnName = columnName.toLowerCase();
+                if (lowerColumnName === 'setor') {
+                    optionsKey = 'setores';
+                } else if (lowerColumnName === 'status') {
+                    optionsKey = 'status';
+                } else {
+                    optionsKey = lowerColumnName + 's';
+                }
+
                 const options = filterOptions[optionsKey];
                 if (options) {
                     options.forEach(val => {
@@ -66,19 +88,38 @@
                     <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Aplicar</button>
                 </div>`
             );
+            
+            const container = $('.menu-container-pedidos');
+            const buttonOffset = button.offset();
+            const containerOffset = container.offset();
+            const topPos = buttonOffset.top - containerOffset.top + button.outerHeight();
+            const leftPos = buttonOffset.left - containerOffset.left;
+
+            popup.css({
+                top: topPos + 'px',
+                left: leftPos + 'px'
+            }).addClass('active').show();
         }
-        
-        $('#tabela-pedidos_wrapper').on('click', '.filter-btn', function(e) {
+
+        $(document).on('click', '#tabela-pedidos_wrapper .filter-btn', function(e) {
             e.stopPropagation();
-            const colName = $(this).data('filter');
-            $('.filter-popup').not(`#filter-popup-${colName}`).removeClass('active');
-            renderFilterPopup(colName);
-            $(`#filter-popup-${colName}`).toggleClass('active');
+            const button = $(this);
+            const colName = button.data('filter');
+
+            if (popup.is(':visible') && popup.data('current-filter') === colName) {
+                popup.hide().removeClass('active');
+            } else {
+                popup.data('current-filter', colName);
+                renderFilterPopup(colName, button);
+            }
         });
 
-        $(document).on('click', function() { $('.filter-popup').removeClass('active'); });
-        $('#tabela-pedidos_wrapper').on('click', '.filter-popup', function(e) { e.stopPropagation(); });
-
+        $(document).on('click', function(e) {
+            if (!popup.is(e.target) && popup.has(e.target).length === 0 && popup.is(':visible')) {
+                popup.hide().removeClass('active');
+            }
+        });
+        popup.on('click', function(e) { e.stopPropagation(); });
 
         window.applyColumnFilter = function(colName) {
             const colIndex = table.column(`${colName}:name`).index();
@@ -86,20 +127,26 @@
                 activeFilters[colName] = $(`#search-${colName}`).val();
                 table.column(colIndex).search(activeFilters[colName]).draw();
             } else {
-                activeFilters[colName] = $(`#filter-popup-${colName} input:checked`).map(function() { return this.value; }).get();
-                const searchString = activeFilters[colName].join('|');
+                activeFilters[colName] = $(`#the-filter-popup input:checked`).map(function() { return this.value; }).get();
+                
+                let searchString;
+                if (colName === 'Status') {
+                    searchString = activeFilters[colName].map(val => `^${val}$`).join('|');
+                } else {
+                    searchString = activeFilters[colName].join('|');
+                }
+                
                 table.column(colIndex).search(searchString, true, false).draw();
             }
-            $('.filter-popup').removeClass('active');
+            popup.hide().removeClass('active');
         }
 
         window.clearColumnFilter = function(colName) {
             const colIndex = table.column(`${colName}:name`).index();
             activeFilters[colName] = [];
             table.column(colIndex).search('').draw();
-            $('.filter-popup').removeClass('active');
+            popup.hide().removeClass('active');
         }
     });
 </script>
 {% endblock %}
-
