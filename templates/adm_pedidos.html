@@ -6,7 +6,7 @@
 
 {% block scripts %}
 <script>
-    // Funções de Ação
+    // Funções de Ação (sem alteração)
     function cancelarPedido(pedidoId) {
         Swal.fire({
             title: 'Tem certeza?', text: "Deseja cancelar este pedido?", icon: 'warning',
@@ -48,27 +48,39 @@
                 { "data": "Quantidade", "name": "Quantidade" },
                 { "data": "Status", "name": "Status" },
                 { "data": "data_pedido", "name": "data_pedido" },
-                { "data": "acoes", "name": "acoes", "orderable": false }
+                { "data": "acoes", "name": "acoes" }
             ],
             "columnDefs": [
                 { "width": "50px", "targets": [0, 5] },
                 { "width": "120px", "targets": [6, 7, 8] },
-                { "orderable": false, "targets": [1, 2, 3, 4, 6, 8] }
+                { "orderable": false, "targets": [1, 2, 3, 4, 6, 7, 8] }
             ],
             "order": [[ 0, "desc" ]],
             "pageLength": 15,
-            "scrollY": "calc(100vh - 340px)",
+            "scrollY": "calc(100vh - 400px)", // Ajuste de altura para o novo layout
             "scrollX": false,
             "scrollCollapse": true,
             "language": { "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json" },
+            // CORREÇÃO: Lógica para colorir o status
             "createdRow": function( row, data, dataIndex ) {
+                // Colore a célula de Status
+                const statusCell = $('td', row).eq(6);
+                if (data.Status === 'Não Enviado') {
+                    statusCell.addClass('status-nao-enviado');
+                } else if (data.Status === 'Enviado') {
+                    statusCell.addClass('status-enviado');
+                } else if (data.Status === 'Cancelado') {
+                    statusCell.addClass('status-cancelado');
+                }
+                
+                // Renderiza botões de ação
                 if (data.acoes && data.acoes !== '-') {
                      $('td', row).eq(8).html(data.acoes);
                 }
             }
         });
 
-        // --- LÓGICA DOS FILTROS POP-UP ---
+        // --- LÓGICA DOS FILTROS POP-UP (sem alterações) ---
         let activeFilters = {};
         let filterOptions = {};
         let filtersLoaded = false;
@@ -88,24 +100,40 @@
                 popup.append('<h4>Carregando...</h4>');
                 return;
             }
-
-            if (columnName === 'nomeFunc') {
+            
+            if (columnName === 'data_pedido') {
+                popup.append(`<h4>Filtrar por Período</h4>`);
+                popup.append(`<label for="date-start">De:</label><input type="date" id="date-start">`);
+                popup.append(`<label for="date-end">Até:</label><input type="date" id="date-end">`);
+                popup.append(`
+                    <div class="filter-actions" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="btn-sort-group">
+                            <button class="btn-sort-small" onclick="sortByDate('desc')">Mais Novo</button>
+                            <button class="btn-sort-small" onclick="sortByDate('asc')">Mais Antigo</button>
+                        </div>
+                        <div>
+                            <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
+                            <button class="btn-apply" onclick="applyDateFilter()">Aplicar</button>
+                        </div>
+                    </div>
+                `);
+            } else if (columnName === 'nomeFunc') {
                 popup.append(`<h4>Pesquisar por Nome</h4>`);
                 popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}" placeholder="Digite um nome...">`);
+                popup.append(
+                    `<div class="filter-actions">
+                        <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
+                        <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Aplicar</button>
+                    </div>`
+                );
             } else {
                 popup.append(`<h4>Filtrar por ${columnName}</h4>`);
                 const optionsDiv = $('<div class="filter-options"></div>');
-                
-                // CORREÇÃO: Lógica para encontrar a chave correta (ex: 'setores')
                 let optionsKey;
                 const lowerColumnName = columnName.toLowerCase();
-                if (lowerColumnName === 'setor') {
-                    optionsKey = 'setores';
-                } else if (lowerColumnName === 'status') {
-                    optionsKey = 'status';
-                } else {
-                    optionsKey = lowerColumnName + 's';
-                }
+                if (lowerColumnName === 'setor') optionsKey = 'setores';
+                else if (lowerColumnName === 'status') optionsKey = 'status';
+                else optionsKey = lowerColumnName + 's';
                 
                 const options = filterOptions[optionsKey];
                 if (options) {
@@ -115,13 +143,13 @@
                     });
                 }
                 popup.append(optionsDiv);
+                popup.append(
+                    `<div class="filter-actions">
+                        <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
+                        <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Aplicar</button>
+                    </div>`
+                );
             }
-            popup.append(
-                `<div class="filter-actions">
-                    <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
-                    <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Aplicar</button>
-                </div>`
-            );
 
             const container = $('.menu-container-pedidos');
             const buttonOffset = button.offset();
@@ -129,10 +157,7 @@
             const topPos = buttonOffset.top - containerOffset.top + button.outerHeight();
             const leftPos = buttonOffset.left - containerOffset.left;
 
-            popup.css({
-                top: topPos + 'px',
-                left: leftPos + 'px'
-            }).addClass('active').show();
+            popup.css({ top: topPos + 'px', left: leftPos + 'px' }).addClass('active').show();
         }
 
         $(document).on('click', '#tabela-pedidos_wrapper .filter-btn', function(e) {
@@ -154,6 +179,24 @@
             }
         });
         popup.on('click', function(e) { e.stopPropagation(); });
+        
+        window.sortByDate = function(direction) {
+            const colIndex = table.column('data_pedido:name').index();
+            table.order([colIndex, direction]).draw();
+            popup.hide().removeClass('active');
+        }
+        
+        window.applyDateFilter = function() {
+            const colIndex = table.column('data_pedido:name').index();
+            const startDate = $('#date-start').val();
+            const endDate = $('#date-end').val();
+            let dateRange = '';
+            if (startDate && endDate) {
+                dateRange = `${startDate} to ${endDate}`;
+            }
+            table.column(colIndex).search(dateRange).draw();
+            popup.hide().removeClass('active');
+        }
 
         window.applyColumnFilter = function(colName) {
             const colIndex = table.column(`${colName}:name`).index();
@@ -162,14 +205,12 @@
                 table.column(colIndex).search(activeFilters[colName]).draw();
             } else {
                 activeFilters[colName] = $(`#the-filter-popup input:checked`).map(function() { return this.value; }).get();
-                
                 let searchString;
                 if (colName === 'Status') {
                     searchString = activeFilters[colName].map(val => `^${val}$`).join('|');
                 } else {
                     searchString = activeFilters[colName].join('|');
                 }
-                
                 table.column(colIndex).search(searchString, true, false).draw();
             }
             popup.hide().removeClass('active');
@@ -179,6 +220,10 @@
             const colIndex = table.column(`${colName}:name`).index();
             activeFilters[colName] = [];
             table.column(colIndex).search('').draw();
+            if (colName === 'data_pedido') {
+                $('#date-start').val('');
+                $('#date-end').val('');
+            }
             popup.hide().removeClass('active');
         }
     });

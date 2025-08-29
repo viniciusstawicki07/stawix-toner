@@ -856,7 +856,6 @@ def dados_pedidos_admin():
     where_clauses = []
     params = []
 
-    # CORREÇÃO 1: Adiciona o filtro de busca global
     global_search_value = request.args.get('search[value]')
     if global_search_value:
         search_term = f"%{global_search_value}%"
@@ -868,7 +867,12 @@ def dados_pedidos_admin():
     for i in range(len(column_map)):
         search_value = request.args.get(f'columns[{i}][search][value]')
         if search_value:
-            if '|' in search_value:
+            # NOVO: LÓGICA PARA FILTRO DE DATA
+            if column_map[i] == 'data_pedido' and ' to ' in search_value:
+                start_date, end_date = search_value.split(' to ')
+                where_clauses.append("DATE(data_pedido) BETWEEN %s AND %s")
+                params.extend([start_date, end_date])
+            elif '|' in search_value:
                 parts = [p.strip('^$') for p in search_value.split('|')]
                 placeholders = ', '.join(['%s'] * len(parts))
                 where_clauses.append(f"{column_map[i]} IN ({placeholders})")
@@ -905,7 +909,6 @@ def dados_pedidos_admin():
     cursor.close()
     conn.close()
     
-    # CORREÇÃO 2: Backend agora gera o HTML dos botões diretamente
     for pedido in pedidos:
         if pedido['Status'] == 'Não Enviado':
             pedido['acoes'] = f"""
@@ -944,7 +947,6 @@ def dados_meus_pedidos():
     column_map = ['pedido_id', 'nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Quantidade', 'Status', 'data_pedido']
     order_column = column_map[order_column_index] if 0 <= order_column_index < len(column_map) else 'pedido_id'
 
-    # Base da query com filtro de OU
     base_query = "FROM view_pedidos_entrepostos2"
     where_clauses = [
         "entreposto_id IN ({})".format(','.join(['%s'] * len(regras["entrepostos"]))),
@@ -959,11 +961,16 @@ def dados_meus_pedidos():
         where_clauses.append(f"({global_where})")
         params.extend([search_term] * 5)
 
-    # Adicionar filtros das colunas (LÓGICA CORRIGIDA)
+    # Adicionar filtros das colunas
     for i in range(len(column_map)):
         search_value = request.args.get(f'columns[{i}][search][value]')
         if search_value:
-            if '|' in search_value: # CORREÇÃO: Adicionado para lidar com filtros de checkbox
+            # NOVO: LÓGICA PARA FILTRO DE DATA
+            if column_map[i] == 'data_pedido' and ' to ' in search_value:
+                start_date, end_date = search_value.split(' to ')
+                where_clauses.append("DATE(data_pedido) BETWEEN %s AND %s")
+                params.extend([start_date, end_date])
+            elif '|' in search_value:
                 parts = [p.strip('^$') for p in search_value.split('|')]
                 placeholders = ', '.join(['%s'] * len(parts))
                 where_clauses.append(f"{column_map[i]} IN ({placeholders})")

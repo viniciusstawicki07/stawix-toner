@@ -11,17 +11,18 @@
     <style>
         /* --- CONTAINER E LAYOUT GERAL --- */
         .menu-container-pedidos {
-            width: 98%; max-width: none; height: calc(100vh - 40px); min-height: 700px;
-            display: flex; flex-direction: column; margin: 20px auto;
-            padding: 24px 32px; background-color: #fff; border-radius: 16px;
+            width: 90vw; /* Ocupa 90% da largura da tela */
+            max-width: 1600px; /* Largura máxima para telas grandes */
+            height: 95vh; /* Ocupa 95% da altura da tela */
+            min-height: 600px;
+            display: flex; flex-direction: column; margin: auto;
+            padding: 24px 32px; background-color: rgba(255, 255, 255, 0.904);
+            border-radius: 16px;
             box-shadow: 0 6px 30px rgba(36, 88, 68, 0.12);
-            position: relative; /* Essencial para o novo posicionamento do popup */
+            position: relative;
         }
 
         /* --- ESTILO DA TABELA DATATABLES --- */
-        #tabela-pedidos_wrapper table.dataTable {
-            border-collapse: collapse !important; width: 100% !important;
-        }
         #tabela-pedidos_wrapper table.dataTable thead th {
             background-color: #245844; color: #fff; font-weight: 500;
             padding: 12px 15px; border-bottom: 2px solid #fade3f;
@@ -35,6 +36,21 @@
             background-color: #f5fafd;
         }
 
+        /* --- CORES PARA STATUS --- */
+        .status-nao-enviado {
+            color: #D32F2F !important; /* Vermelho */
+            font-weight: 500;
+        }
+        .status-enviado {
+            color: #388E3C !important; /* Verde Escuro */
+            font-weight: 500;
+        }
+        .status-cancelado {
+            color: #616161 !important; /* Cinza Escuro */
+            font-weight: 500;
+        }
+
+
         /* --- ÍCONES E POP-UPS DE FILTRO --- */
         .filter-btn {
             background: none; border: none; cursor: pointer; padding: 0 4px;
@@ -44,7 +60,7 @@
         .filter-btn img { width: 16px; height: 16px; }
 
         .filter-popup {
-            display: none; position: absolute; /* Agora posicionado em relação ao menu-container-pedidos */
+            display: none; position: absolute;
             left: 0; z-index: 1100;
             background: #fff;
             border: 1px solid #ccc; border-radius: 8px;
@@ -53,7 +69,7 @@
         }
         .filter-popup.active { display: block; }
         .filter-popup h4 { margin: 0 0 10px 0; font-size: 1rem; color: #245844; font-weight: 500; }
-        .filter-popup input[type="text"] {
+        .filter-popup input[type="text"], .filter-popup input[type="date"] {
             width: 100%; padding: 8px; border: 1px solid #ccc;
             border-radius: 4px; margin-bottom: 10px; box-sizing: border-box;
         }
@@ -71,6 +87,17 @@
         }
         .btn-apply { background-color: #245844; color: white; }
         .btn-clear { background-color: #757575; color: white; }
+        
+        .btn-sort-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-sort-small {
+            background-color: #007bff;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
 
         /* --- BOTÕES DE AÇÃO (ADMIN) --- */
         .action-buttons-container { display: flex; gap: 8px; }
@@ -83,6 +110,7 @@
         .dt-button-send:hover { background-color: #218838; transform: translateY(-1px); }
         .dt-button-cancel { background-color: #dc3545; color: white; }
         .dt-button-cancel:hover { background-color: #c82333; transform: translateY(-1px); }
+
     </style>
 </head>
 <body>
@@ -97,7 +125,7 @@
                         <th>
                             Nome
                             <button class="filter-btn" data-filter="nomeFunc">
-                                <img src="/static/images/sort_icon.png" alt="Pesquisar">
+                                <img src="/static/images/search_icon.png" alt="Pesquisar">
                             </button>
                         </th>
                         <th>
@@ -125,7 +153,12 @@
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
                         </th>
-                        <th>Data Pedido</th>
+                        <th>
+                            Data Pedido
+                            <button class="filter-btn" data-filter="data_pedido">
+                                <img src="/static/images/calendar_icon.png" alt="Filtrar por Data">
+                            </button>
+                        </th>
                         {% if is_admin %}
                         <th>Ações</th>
                         {% endif %}
