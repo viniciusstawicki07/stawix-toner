@@ -7,7 +7,6 @@
 {% block scripts %}
 <script>
     $(document).ready(function() {
-        // CORREÇÃO: Adicionada a propriedade 'name' a cada coluna.
         let table = $('#tabela-pedidos').DataTable({
             "processing": true,
             "serverSide": true,
@@ -47,12 +46,12 @@
             popup.empty();
             if (columnName === 'nomeFunc') {
                 popup.append(`<h4>Pesquisar por Nome</h4>`);
-                popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}">`);
+                popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}" placeholder="Digite um nome...">`);
             } else {
                 popup.append(`<h4>Filtrar por ${columnName}</h4>`);
                 const optionsDiv = $('<div class="filter-options"></div>');
-                const optionsKey = columnName.toLowerCase() + 's';
-                const options = filterOptions[optionsKey] || filterOptions[columnName.toLowerCase()];
+                const optionsKey = columnName.toLowerCase() === 'status' ? 'status' : columnName.toLowerCase() + 's';
+                const options = filterOptions[optionsKey];
                 if (options) {
                     options.forEach(val => {
                         const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
@@ -64,12 +63,12 @@
             popup.append(
                 `<div class="filter-actions">
                     <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
-                    <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Filtrar</button>
+                    <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Aplicar</button>
                 </div>`
             );
         }
-
-        $('#tabela-pedidos').on('click', '.filter-btn', function(e) {
+        
+        $('#tabela-pedidos_wrapper').on('click', '.filter-btn', function(e) {
             e.stopPropagation();
             const colName = $(this).data('filter');
             $('.filter-popup').not(`#filter-popup-${colName}`).removeClass('active');
@@ -78,7 +77,8 @@
         });
 
         $(document).on('click', function() { $('.filter-popup').removeClass('active'); });
-        $('.filter-popup').on('click', function(e) { e.stopPropagation(); });
+        $('#tabela-pedidos_wrapper').on('click', '.filter-popup', function(e) { e.stopPropagation(); });
+
 
         window.applyColumnFilter = function(colName) {
             const colIndex = table.column(`${colName}:name`).index();
@@ -87,7 +87,7 @@
                 table.column(colIndex).search(activeFilters[colName]).draw();
             } else {
                 activeFilters[colName] = $(`#filter-popup-${colName} input:checked`).map(function() { return this.value; }).get();
-                const searchString = activeFilters[colName].map(v => `^${v}$`).join('|');
+                const searchString = activeFilters[colName].join('|');
                 table.column(colIndex).search(searchString, true, false).draw();
             }
             $('.filter-popup').removeClass('active');
@@ -102,3 +102,4 @@
     });
 </script>
 {% endblock %}
+

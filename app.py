@@ -843,32 +843,40 @@ def dados_pedidos_admin():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # Parâmetros do DataTables
     draw = request.args.get('draw', type=int)
     start = request.args.get('start', type=int)
     length = request.args.get('length', type=int)
     
-    # Parâmetros de ordenação
+    column_map = ['pedido_id', 'nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Quantidade', 'Status', 'data_pedido']
     order_column_index = request.args.get('order[0][column]', 0, type=int)
     order_dir = request.args.get('order[0][dir]', 'desc', type=str)
-    
-    column_map = ['pedido_id', 'nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Quantidade', 'Status', 'data_pedido']
     order_column = column_map[order_column_index] if 0 <= order_column_index < len(column_map) else 'pedido_id'
 
-    # Lógica de busca e filtros
     base_query = "FROM view_pedidos"
     where_clauses = []
     params = []
 
-    # Loop através das colunas para aplicar filtros
+    # CORREÇÃO 1: Adiciona o filtro de busca global
+    global_search_value = request.args.get('search[value]')
+    if global_search_value:
+        search_term = f"%{global_search_value}%"
+        global_where = " OR ".join([f"{col} LIKE %s" for col in ['nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Status']])
+        where_clauses.append(f"({global_where})")
+        params.extend([search_term] * 5)
+
+    # Adiciona os filtros de colunas individuais
     for i in range(len(column_map)):
         search_value = request.args.get(f'columns[{i}][search][value]')
         if search_value:
-            # A busca com '^' e '$' garante correspondência exata do dropdown
-            if search_value.startswith('^') and search_value.endswith('$'):
+            if '|' in search_value:
+                parts = [p.strip('^$') for p in search_value.split('|')]
+                placeholders = ', '.join(['%s'] * len(parts))
+                where_clauses.append(f"{column_map[i]} IN ({placeholders})")
+                params.extend(parts)
+            elif search_value.startswith('^') and search_value.endswith('$'):
                 where_clauses.append(f"{column_map[i]} = %s")
                 params.append(search_value.strip('^$'))
-            else: # Busca de texto normal para o campo "Nome"
+            else:
                 where_clauses.append(f"{column_map[i]} LIKE %s")
                 params.append(f"%{search_value}%")
     
@@ -879,9 +887,7 @@ def dados_pedidos_admin():
     # Contagem de registros
     cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query}")
     records_total = cursor.fetchone()['total']
-
-    count_query_params = tuple(params)
-    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query} {where_sql}", count_query_params)
+    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query} {where_sql}", tuple(params))
     records_filtered = cursor.fetchone()['total']
 
     # Query principal
@@ -891,29 +897,28 @@ def dados_pedidos_admin():
         ORDER BY {order_column} {order_dir}
         LIMIT %s OFFSET %s
     """
-    params.extend([length, start])
-    cursor.execute(query, tuple(params))
+    final_params = list(params)
+    final_params.extend([length, start])
+    cursor.execute(query, tuple(final_params))
     pedidos = cursor.fetchall()
     
     cursor.close()
     conn.close()
     
-    # Adicionar HTML de ações
-    data = []
+    # CORREÇÃO 2: Backend agora gera o HTML dos botões diretamente
     for pedido in pedidos:
         if pedido['Status'] == 'Não Enviado':
             pedido['acoes'] = f"""
                 <div class="action-buttons-container">
-                    <button class="action-button cancel-button" onclick="cancelarPedido({pedido['pedido_id']})">Cancelar</button>
-                    <button class="action-button send-button" onclick="enviarPedido({pedido['pedido_id']})">Enviar</button>
+                    <button class="dt-button-cancel" onclick="cancelarPedido({pedido['pedido_id']})">Cancelar</button>
+                    <button class="dt-button-send" onclick="enviarPedido({pedido['pedido_id']})">Enviar</button>
                 </div>"""
         else:
             pedido['acoes'] = '-'
-        data.append(pedido)
 
     return jsonify({
         'draw': draw, 'recordsTotal': records_total,
-        'recordsFiltered': records_filtered, 'data': data
+        'recordsFiltered': records_filtered, 'data': pedidos
     })
 
 
