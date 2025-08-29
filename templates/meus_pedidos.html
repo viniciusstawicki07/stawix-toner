@@ -7,6 +7,7 @@
 {% block scripts %}
 <script>
     $(document).ready(function() {
+        // CORREÇÃO: Adicionada a propriedade 'name' a cada coluna.
         let table = $('#tabela-pedidos').DataTable({
             "processing": true,
             "serverSide": true,
@@ -34,7 +35,7 @@
             "language": { "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json" }
         });
 
-        // --- LÓGICA DOS FILTROS POP-UP (idêntica à de admin) ---
+        // --- LÓGICA DOS FILTROS POP-UP ---
         let activeFilters = {};
         let filterOptions = {};
         fetch("{{ url_for('get_filter_options') }}")
@@ -50,11 +51,14 @@
             } else {
                 popup.append(`<h4>Filtrar por ${columnName}</h4>`);
                 const optionsDiv = $('<div class="filter-options"></div>');
-                const options = filterOptions[columnName.toLowerCase() + 's'] || filterOptions[columnName.toLowerCase()];
-                options.forEach(val => {
-                    const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
-                    optionsDiv.append(`<label><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}> ${val}</label>`);
-                });
+                const optionsKey = columnName.toLowerCase() + 's';
+                const options = filterOptions[optionsKey] || filterOptions[columnName.toLowerCase()];
+                if (options) {
+                    options.forEach(val => {
+                        const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
+                        optionsDiv.append(`<label><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}> ${val}</label>`);
+                    });
+                }
                 popup.append(optionsDiv);
             }
             popup.append(
@@ -65,7 +69,7 @@
             );
         }
 
-        $('.filter-btn').on('click', function(e) {
+        $('#tabela-pedidos').on('click', '.filter-btn', function(e) {
             e.stopPropagation();
             const colName = $(this).data('filter');
             $('.filter-popup').not(`#filter-popup-${colName}`).removeClass('active');

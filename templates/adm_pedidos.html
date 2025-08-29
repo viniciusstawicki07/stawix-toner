@@ -35,14 +35,21 @@
     }
 
     $(document).ready(function() {
+        // CORREÇÃO: Adicionada a propriedade 'name' a cada coluna para o seletor funcionar.
         let table = $('#tabela-pedidos').DataTable({
             "processing": true,
             "serverSide": true,
             "ajax": "{{ url_for('dados_pedidos_admin') }}",
             "columns": [
-                { "data": "pedido_id" }, { "data": "nomeFunc" }, { "data": "Entreposto" },
-                { "data": "Setor" }, { "data": "Impressora" }, { "data": "Quantidade" },
-                { "data": "Status" }, { "data": "data_pedido" }, { "data": "acoes" }
+                { "data": "pedido_id", "name": "pedido_id" }, 
+                { "data": "nomeFunc", "name": "nomeFunc" }, 
+                { "data": "Entreposto", "name": "Entreposto" },
+                { "data": "Setor", "name": "Setor" }, 
+                { "data": "Impressora", "name": "Impressora" }, 
+                { "data": "Quantidade", "name": "Quantidade" },
+                { "data": "Status", "name": "Status" }, 
+                { "data": "data_pedido", "name": "data_pedido" }, 
+                { "data": "acoes", "name": "acoes" }
             ],
             "columnDefs": [
                 { "width": "50px", "targets": [0, 5] },
@@ -52,17 +59,17 @@
             "order": [[ 0, "desc" ]],
             "pageLength": 15,
             "scrollY": "calc(100vh - 340px)",
-            "scrollX": false, // Desativa a rolagem horizontal
+            "scrollX": false,
             "scrollCollapse": true,
             "language": { "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json" },
-            // Cria os botões de ação na coluna 'Ações'
             "createdRow": function( row, data, dataIndex ) {
                 if (data.Status === 'Não Enviado') {
-                    $('td', row).eq(8).html(
-                        `<div class="action-buttons-container">
-                            <button class="dt-button-cancel" onclick="cancelarPedido(${data.pedido_id})">Cancelar</button>
-                            <button class="dt-button-send" onclick="enviarPedido(${data.pedido_id})">Enviar</button>
-                        </div>`
+                    // Limpa o conteúdo e adiciona os botões
+                    $('td', row).eq(8).empty().append(
+                        $('<div class="action-buttons-container"></div>').append(
+                            $('<button class="dt-button-cancel">Cancelar</button>').on('click', function() { cancelarPedido(data.pedido_id); }),
+                            $('<button class="dt-button-send">Enviar</button>').on('click', function() { enviarPedido(data.pedido_id); })
+                        )
                     );
                 }
             }
@@ -70,33 +77,30 @@
 
         // --- LÓGICA DOS FILTROS POP-UP ---
         let activeFilters = {};
-
-        // Busca as opções de filtro uma única vez
         let filterOptions = {};
         fetch("{{ url_for('get_filter_options') }}")
             .then(response => response.json())
             .then(data => filterOptions = data);
 
-        // Função para criar o conteúdo do pop-up
         function renderFilterPopup(columnName) {
             const popup = $(`#filter-popup-${columnName}`);
-            popup.empty(); // Limpa o conteúdo anterior
-
+            popup.empty();
             if (columnName === 'nomeFunc') {
                 popup.append(`<h4>Pesquisar por Nome</h4>`);
                 popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}">`);
             } else {
                 popup.append(`<h4>Filtrar por ${columnName}</h4>`);
                 const optionsDiv = $('<div class="filter-options"></div>');
-                const options = filterOptions[columnName.toLowerCase() + 's'] || filterOptions[columnName.toLowerCase()];
-                options.forEach(val => {
-                    const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
-                    optionsDiv.append(`<label><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}> ${val}</label>`);
-                });
+                const optionsKey = columnName.toLowerCase() + 's';
+                const options = filterOptions[optionsKey] || filterOptions[columnName.toLowerCase()];
+                if(options) {
+                    options.forEach(val => {
+                        const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
+                        optionsDiv.append(`<label><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}> ${val}</label>`);
+                    });
+                }
                 popup.append(optionsDiv);
             }
-
-            // Ações (botões)
             popup.append(
                 `<div class="filter-actions">
                     <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
@@ -105,8 +109,7 @@
             );
         }
 
-        // Evento de clique nos botões de filtro
-        $('.filter-btn').on('click', function(e) {
+        $('#tabela-pedidos').on('click', '.filter-btn', function(e) {
             e.stopPropagation();
             const colName = $(this).data('filter');
             $('.filter-popup').not(`#filter-popup-${colName}`).removeClass('active');
@@ -114,16 +117,11 @@
             $(`#filter-popup-${colName}`).toggleClass('active');
         });
 
-        // Fechar pop-ups ao clicar fora
-        $(document).on('click', function() {
-            $('.filter-popup').removeClass('active');
-        });
-        $('.filter-popup').on('click', function(e) {
-            e.stopPropagation();
-        });
+        $(document).on('click', function() { $('.filter-popup').removeClass('active'); });
+        $('.filter-popup').on('click', function(e) { e.stopPropagation(); });
 
-        // Funções globais para aplicar/limpar filtros
         window.applyColumnFilter = function(colName) {
+            // CORREÇÃO: Usar o seletor :name para encontrar o índice correto da coluna
             const colIndex = table.column(`${colName}:name`).index();
             if (colName === 'nomeFunc') {
                 activeFilters[colName] = $(`#search-${colName}`).val();

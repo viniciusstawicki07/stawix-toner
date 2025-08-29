@@ -25,15 +25,15 @@
         }
         .table-wrapper {
             flex-grow: 1;
-            overflow: hidden; /* Remove a barra de rolagem do container */
+            overflow: hidden;
         }
 
-        /* --- ESTILO DA TABELA DATATABLES --- */
-        table.dataTable {
+        /* --- ESTILO DA TABELA DATATABLES (COM ESCOPO PARA EVITAR CONFLITOS) --- */
+        #tabela-pedidos_wrapper table.dataTable {
             border-collapse: collapse !important;
-            width: 100% !important; /* Força a largura total */
+            width: 100% !important;
         }
-        table.dataTable thead th {
+        #tabela-pedidos_wrapper table.dataTable thead th {
             background-color: #245844;
             color: #fff;
             font-weight: 500;
@@ -42,90 +42,73 @@
             white-space: nowrap;
             position: relative; /* Essencial para o posicionamento dos popups */
         }
-        table.dataTable tbody td {
+        #tabela-pedidos_wrapper table.dataTable tbody td {
             padding: 10px 15px;
             border-bottom: 1px solid #eef0f5;
             color: #333;
             font-size: 0.88rem;
             white-space: nowrap;
         }
-        table.dataTable tbody tr:hover {
+        #tabela-pedidos_wrapper table.dataTable tbody tr:hover {
             background-color: #f5fafd;
         }
 
         /* --- ÍCONES E POP-UPS DE FILTRO --- */
         .filter-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0 4px;
-            margin-left: 8px;
-            vertical-align: middle;
-            opacity: 0.8;
-            transition: opacity 0.2s;
+            background: none; border: none; cursor: pointer;
+            padding: 0 4px; margin-left: 8px; vertical-align: middle;
+            opacity: 0.8; transition: opacity 0.2s;
         }
-        .filter-btn:hover {
-            opacity: 1;
-        }
-        .filter-btn img {
-            width: 16px;
-            height: 16px;
-        }
+        .filter-btn:hover { opacity: 1; }
+        .filter-btn img { width: 16px; height: 16px; }
 
         .filter-popup {
             display: none;
             position: absolute;
-            top: 100%; /* Posiciona abaixo do cabeçalho */
+            top: 100%;
             left: 0;
-            z-index: 100;
+            z-index: 1000; /* Aumentado para garantir que fique sobre outros elementos */
             background: #fff;
             border: 1px solid #ccc;
             border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             padding: 15px;
             min-width: 280px;
+            margin-top: 5px; /* Espaço entre o cabeçalho e o popup */
         }
-        .filter-popup.active {
-            display: block;
+
+        /* Garante que o container dos cabeçalhos não corte os popups */
+        .table-wrapper {
+            overflow: visible !important;
         }
+
+        /* Garante que o container da tabela não corte os popups */
+        #tabela-pedidos_wrapper {
+            overflow: visible !important;
+        }
+        .filter-popup.active { display: block; }
         .filter-popup h4 {
-            margin: 0 0 10px 0;
-            font-size: 1rem;
-            color: #245844;
-            font-weight: 500;
+            margin: 0 0 10px 0; font-size: 1rem;
+            color: #245844; font-weight: 500;
         }
         .filter-popup input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
+            width: 100%; padding: 8px; border: 1px solid #ccc;
+            border-radius: 4px; margin-bottom: 10px; box-sizing: border-box;
         }
         .filter-popup .filter-options {
-            max-height: 200px;
-            overflow-y: auto;
-            padding-right: 10px; /* Espaço para a barra de rolagem */
+            max-height: 200px; overflow-y: auto; padding-right: 10px;
         }
         .filter-popup .filter-options label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 8px; font-size: 0.9rem; cursor: pointer;
         }
         .filter-popup .filter-actions {
-            margin-top: 15px;
-            text-align: right;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
+            margin-top: 15px; text-align: right;
+            border-top: 1px solid #eee; padding-top: 10px;
         }
         .filter-popup button {
-            padding: 6px 12px;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            margin-left: 5px;
+            padding: 6px 12px; border-radius: 5px; border: none;
+            cursor: pointer; font-weight: 500; margin-left: 5px;
         }
         .btn-apply { background-color: #245844; color: white; }
         .btn-clear { background-color: #757575; color: white; }
@@ -141,7 +124,6 @@
         .dt-button-send:hover { background-color: #218838; transform: translateY(-1px); }
         .dt-button-cancel { background-color: #dc3545; color: white; }
         .dt-button-cancel:hover { background-color: #c82333; transform: translateY(-1px); }
-
     </style>
 </head>
 <body>
@@ -156,8 +138,9 @@
                         <th>
                             Nome
                             <button class="filter-btn" data-filter="nomeFunc">
-                                <img src="/static/images/sort_icon.png" alt="Pesquisar">
+                                <img src="/static/images/filter_icon.png" alt="Pesquisar">
                             </button>
+                            <!-- CORREÇÃO: Div do popup adicionada -->
                             <div class="filter-popup" id="filter-popup-nomeFunc"></div>
                         </th>
                         <th>
@@ -165,6 +148,7 @@
                             <button class="filter-btn" data-filter="Entreposto">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
+                             <!-- CORREÇÃO: Div do popup adicionada -->
                             <div class="filter-popup" id="filter-popup-Entreposto"></div>
                         </th>
                         <th>
@@ -172,6 +156,7 @@
                             <button class="filter-btn" data-filter="Setor">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
+                             <!-- CORREÇÃO: Div do popup adicionada -->
                             <div class="filter-popup" id="filter-popup-Setor"></div>
                         </th>
                         <th>
@@ -179,6 +164,7 @@
                             <button class="filter-btn" data-filter="Impressora">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
+                             <!-- CORREÇÃO: Div do popup adicionada -->
                             <div class="filter-popup" id="filter-popup-Impressora"></div>
                         </th>
                         <th>Qtd</th>
@@ -187,6 +173,7 @@
                             <button class="filter-btn" data-filter="Status">
                                 <img src="/static/images/filter_icon.png" alt="Filtrar">
                             </button>
+                             <!-- CORREÇÃO: Div do popup adicionada -->
                             <div class="filter-popup" id="filter-popup-Status"></div>
                         </th>
                         <th>Data Pedido</th>
@@ -208,3 +195,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+
