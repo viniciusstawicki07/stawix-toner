@@ -147,6 +147,16 @@ def get_versao():
     except Exception:
         return ''
 
+@app.route('/')
+@login_required
+def index():
+    print("Email do usuario:")
+    print(session['user_email'])
+    print(session['user_ou'])
+    versao = get_versao()
+    return render_template('index.html', user=session['user'], versao=versao)
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -497,41 +507,11 @@ def get_setores(entreposto_id):
 
 
 
-# Rota para exibir "Meus Pedidos"
 @app.route('/meus_pedidos')
 @login_required
 def meus_pedidos():
-    user_ou = session.get('user_ou')  # Obtém a OU do usuário logado
-
-    # Obtenha os entrepostos e setores visíveis para a OU
-    regras = OU_ENTREPOSTOS_SETORES.get(user_ou, {"entrepostos": [], "setores": []})
-    entrepostos_visiveis = regras["entrepostos"]
-    setores_visiveis = regras["setores"]
-    print(setores_visiveis)
-    print(entrepostos_visiveis)
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Construa a consulta SQL dinamicamente
-    entrepostos_placeholder = ', '.join(['%s'] * len(entrepostos_visiveis))
-    setores_placeholder = ', '.join(['%s'] * len(setores_visiveis))
-    query = f'''
-        SELECT pedido_id, nomeFunc, Entreposto, Setor, Impressora, Quantidade, Status, data_pedido 
-        FROM view_pedidos_entrepostos2
-        WHERE entreposto_id IN ({entrepostos_placeholder}) AND setor_id IN ({setores_placeholder})
-        ORDER BY pedido_id DESC
-    '''
-    params = tuple(entrepostos_visiveis) + tuple(setores_visiveis)
-
-    # Execute a consulta
-    cursor.execute(query, params)
-    pedidos = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return render_template('meus_pedidos.html', pedidos=pedidos, user=session['user'])
+    # Também fica muito mais simples
+    return render_template('meus_pedidos.html', is_admin=False)
 
 @app.route('/admin')
 @admin_required
@@ -541,18 +521,8 @@ def admin_page():
 @app.route('/admin_pedidos')
 @admin_required
 def admin_page_pedidos():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Consulta todos os pedidos
-    cursor.execute('SELECT pedido_id, nomeFunc, Entreposto, Setor, Impressora, Quantidade, Status, data_pedido FROM view_pedidos ORDER BY pedido_id DESC')
-    pedidos = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    # Renderiza a página de administração com todos os pedidos
-    return render_template('adm_pedidos.html', pedidos=pedidos, session=session)
+    # A rota agora é muito mais simples!
+    return render_template('adm_pedidos.html', is_admin=True)
 
 
 # Rota para cancelar o pedido
@@ -865,6 +835,185 @@ def dados_relatorios():
     conn.close()
 
     return jsonify(data)
+
+# ROTA DE API PARA A TABELA DE ADMIN - ATUALIZADA
+@app.route('/api/dados_pedidos_admin')
+@admin_required
+def dados_pedidos_admin():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Parâmetros do DataTables
+    draw = request.args.get('draw', type=int)
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    
+    # Parâmetros de ordenação
+    order_column_index = request.args.get('order[0][column]', 0, type=int)
+    order_dir = request.args.get('order[0][dir]', 'desc', type=str)
+    
+    column_map = ['pedido_id', 'nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Quantidade', 'Status', 'data_pedido']
+    order_column = column_map[order_column_index] if 0 <= order_column_index < len(column_map) else 'pedido_id'
+
+    # Lógica de busca e filtros
+    base_query = "FROM view_pedidos"
+    where_clauses = []
+    params = []
+
+    # Loop através das colunas para aplicar filtros
+    for i in range(len(column_map)):
+        search_value = request.args.get(f'columns[{i}][search][value]')
+        if search_value:
+            # A busca com '^' e '$' garante correspondência exata do dropdown
+            if search_value.startswith('^') and search_value.endswith('$'):
+                where_clauses.append(f"{column_map[i]} = %s")
+                params.append(search_value.strip('^$'))
+            else: # Busca de texto normal para o campo "Nome"
+                where_clauses.append(f"{column_map[i]} LIKE %s")
+                params.append(f"%{search_value}%")
+    
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    # Contagem de registros
+    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query}")
+    records_total = cursor.fetchone()['total']
+
+    count_query_params = tuple(params)
+    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query} {where_sql}", count_query_params)
+    records_filtered = cursor.fetchone()['total']
+
+    # Query principal
+    query = f"""
+        SELECT pedido_id, nomeFunc, Entreposto, Setor, Impressora, Quantidade, Status, data_pedido 
+        {base_query} {where_sql}
+        ORDER BY {order_column} {order_dir}
+        LIMIT %s OFFSET %s
+    """
+    params.extend([length, start])
+    cursor.execute(query, tuple(params))
+    pedidos = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # Adicionar HTML de ações
+    data = []
+    for pedido in pedidos:
+        if pedido['Status'] == 'Não Enviado':
+            pedido['acoes'] = f"""
+                <div class="action-buttons-container">
+                    <button class="action-button cancel-button" onclick="cancelarPedido({pedido['pedido_id']})">Cancelar</button>
+                    <button class="action-button send-button" onclick="enviarPedido({pedido['pedido_id']})">Enviar</button>
+                </div>"""
+        else:
+            pedido['acoes'] = '-'
+        data.append(pedido)
+
+    return jsonify({
+        'draw': draw, 'recordsTotal': records_total,
+        'recordsFiltered': records_filtered, 'data': data
+    })
+
+
+# ROTA DE API PARA "MEUS PEDIDOS" - ATUALIZADA
+@app.route('/api/dados_meus_pedidos')
+@login_required
+def dados_meus_pedidos():
+    user_ou = session.get('user_ou')
+    regras = OU_ENTREPOSTOS_SETORES.get(user_ou, {"entrepostos": [], "setores": []})
+    
+    if not regras["entrepostos"] or not regras["setores"]:
+        return jsonify({'draw': request.args.get('draw', type=int), 'recordsTotal': 0, 'recordsFiltered': 0, 'data': []})
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    draw = request.args.get('draw', type=int)
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    order_column_index = request.args.get('order[0][column]', 0, type=int)
+    order_dir = request.args.get('order[0][dir]', 'desc', type=str)
+    
+    column_map = ['pedido_id', 'nomeFunc', 'Entreposto', 'Setor', 'Impressora', 'Quantidade', 'Status', 'data_pedido']
+    order_column = column_map[order_column_index] if 0 <= order_column_index < len(column_map) else 'pedido_id'
+
+    # Base da query com filtro de OU
+    base_query = "FROM view_pedidos_entrepostos2"
+    where_clauses = [
+        "entreposto_id IN ({})".format(','.join(['%s'] * len(regras["entrepostos"]))),
+        "setor_id IN ({})".format(','.join(['%s'] * len(regras["setores"])))
+    ]
+    params = list(regras["entrepostos"]) + list(regras["setores"])
+    
+    # Adicionar filtros das colunas
+    for i in range(len(column_map)):
+        search_value = request.args.get(f'columns[{i}][search][value]')
+        if search_value:
+            if search_value.startswith('^') and search_value.endswith('$'):
+                where_clauses.append(f"{column_map[i]} = %s")
+                params.append(search_value.strip('^$'))
+            else:
+                where_clauses.append(f"{column_map[i]} LIKE %s")
+                params.append(f"%{search_value}%")
+
+    where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    # Contagem de registros
+    count_total_params = tuple(list(regras["entrepostos"]) + list(regras["setores"]))
+    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query} WHERE entreposto_id IN ({','.join(['%s'] * len(regras['entrepostos']))}) AND setor_id IN ({','.join(['%s'] * len(regras['setores']))})", count_total_params)
+    records_total = cursor.fetchone()['total']
+
+    count_filtered_params = tuple(params)
+    cursor.execute(f"SELECT COUNT(pedido_id) as total {base_query} {where_sql}", count_filtered_params)
+    records_filtered = cursor.fetchone()['total']
+
+    # Query principal
+    query = f"""
+        SELECT pedido_id, nomeFunc, Entreposto, Setor, Impressora, Quantidade, Status, data_pedido 
+        {base_query} {where_sql}
+        ORDER BY {order_column} {order_dir}
+        LIMIT %s OFFSET %s
+    """
+    params.extend([length, start])
+    cursor.execute(query, tuple(params))
+    pedidos = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        'draw': draw, 'recordsTotal': records_total,
+        'recordsFiltered': records_filtered, 'data': pedidos
+    })
+
+# NOVA ROTA PARA OBTER OPÇÕES DE FILTRO
+@app.route('/api/filter_options')
+@login_required
+def get_filter_options():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    options = {}
+    
+    # Usamos a view_pedidos para garantir que só apareçam opções que existem nos pedidos
+    cursor.execute("SELECT DISTINCT Entreposto FROM view_pedidos ORDER BY Entreposto")
+    options['entrepostos'] = [row['Entreposto'] for row in cursor.fetchall()]
+
+    cursor.execute("SELECT DISTINCT Setor FROM view_pedidos ORDER BY Setor")
+    options['setores'] = [row['Setor'] for row in cursor.fetchall()]
+
+    cursor.execute("SELECT DISTINCT Impressora FROM view_pedidos ORDER BY Impressora")
+    options['impressoras'] = [row['Impressora'] for row in cursor.fetchall()]
+    
+    # Status pode ser uma lista fixa
+    options['status'] = ['Não Enviado', 'Enviado', 'Cancelado']
+
+    cursor.close()
+    conn.close()
+    
+    return jsonify(options)
 
 @app.route('/dashboard')
 @login_required

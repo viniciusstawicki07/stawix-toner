@@ -1,587 +1,100 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Pedidos</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
-    <style>
-        body {
-            font-family: 'Roboto', Arial, sans-serif;
-            background: #f5f6fa;
-            margin: 0;
-        }
-        .menu-container-pedidos {
-            min-height: 800px;
-            max-height: 800px;
-            min-width: 1100px;
-            max-width: 1500px;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(36, 88, 68, 0.10);
-            margin: 40px auto 0 auto;
-            padding: 32px 32px 24px 32px;
-        }
-        .menu-title {
-            color: #245844;
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 24px;
-            letter-spacing: 1px;
-        }
-        .pedidos-tabela {
-            border-collapse: separate;
-            border-spacing: 0;
-            background: #fff;
-            border-radius: 10px;
-            overflow: visible;
-            box-shadow: 0 2px 8px rgba(36, 88, 68, 0.06);
-            font-size: 0.92rem;
-            table-layout: auto; /* permite ajuste automático das colunas */
-        }
-        .pedidos-tabela th, .pedidos-tabela td {
-            padding: 8px 6px;
-            text-align: left;
-            word-break: break-word;
-            max-width: 180px;
-            min-width: 110px;
-            white-space: normal;
-        }
-        .pedidos-tabela th {
-            background: #245844;
-            color: #fff;
-            font-weight: 500;
-            font-size: 0.92rem;
-            border-bottom: 2px solid #e0e0e0;
-            position: relative;
-            white-space: nowrap;
-        }
-        .pedidos-tabela tr {
-            transition: background 0.15s;
-            min-height: 48px;
-            max-height: 48px;
-        }
-        .pedidos-tabela tbody tr:hover {
-            background: #f2f8f6;
-        }
-        .pedidos-tabela td {
-            font-size: 0.82rem;
-            color: #245844;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .status-cell {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: #f0f0f0;
-            border-radius: 6px;
-            min-width: 120px;
-            min-height: 28px;
-            justify-content: flex-start;
-            padding: 2px 8px;
-            box-sizing: border-box;
-        }
-        .status-icon {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
-            background-size: contain;
-            background-repeat: no-repeat;
-        }
-        .status-nao-enviado .status-icon {
-            background-image: url('/static/images/status_nao_enviado.png');
-        }
-        .status-enviado .status-icon {
-            background-image: url('/static/images/status_enviado.png');
-        }
-        .status-cancelado .status-icon {
-            background-image: url('/static/images/status_cancelado.png');
-        }
-        .status-nao-enviado span {
-            color: #e53935;
-        }
-        .status-enviado span {
-            color: #388e3c;
-        }
-        .status-cancelado span {
-            color: #757575;
-        }
-        .pagination {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 8px;
-            margin-top: 18px;
-        }
-        .pagination button {
-            background: #245844;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 10px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-        }
-        .pagination button:disabled {
-            background: #cfd8dc;
-            color: #888;
-            cursor: not-allowed;
-        }
-        .pagination .active-page {
-            background: #FFD600;
-            color: #245844;
-            font-weight: bold;
-        }
-        .filter-btn, .sort-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0 2px;
-            margin-left: 2px;
-            vertical-align: middle;
-        }
-        .filter-btn img, .sort-btn img {
-            width: 16px;
-            height: 16px;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-        .filter-btn:hover img, .sort-btn:hover img {
-            opacity: 1;
-        }
-        .filter-popup {
-            display: none;
-            position: absolute;
-            top: 110%;
-            left: 0;
-            z-index: 9999; /* aumentado para garantir que fique acima de tudo */
-            background: #fff;
-            border: 1px solid #cfd8dc;
-            border-radius: 6px;
-            box-shadow: 0 2px 16px rgba(36, 88, 68, 0.18); /* sombra mais forte */
-            padding: 12px;
-            min-width: 240px;
-        }
-        .filter-popup.active {
-            display: block;
-        }
-        .filter-popup input[type="text"] {
-            width: 100%;
-            margin-bottom: 8px;
-            padding: 4px 6px;
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
-            font-size: 0.92rem;
-        }
-        .filter-popup .filter-options{
-            max-height: 160px;   /* mantém scroll só se houver muitos itens       */
-            overflow-y: auto;    /* “auto” não mostra barra quando há poucos      */
-            margin-bottom: 8px;
-        }
+{% extends "tabela_base.html" %}
 
-        .filter-popup label {
-            font-size: 0.92rem;
-            color: #245844;
-            margin-bottom: 2px;
-            text-align: left; 
-        }
-        .filter-popup .filter-options label {
-            display: flex;
-            align-items: center;
-            font-size: 0.92rem;
-            color: #245844;
-            margin-bottom: 2px;
-            gap: 6px;
-            padding-left: 0;
-            justify-content: flex-start; /* garante alinhamento à esquerda */
-            text-align: left;            /* garante alinhamento à esquerda */
-        }
-        .filter-popup .filter-options input[type="checkbox"] {
-            margin-right: 4px;
-            margin-left: 0;
-        }
-        .filter-popup .filter-actions {
-            text-align: right;
-        }
-        .filter-popup button {
-            background: #245844;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 2px 10px;
-            font-size: 0.92rem;
-            cursor: pointer;
-            margin-left: 4px;
-        }
-        .filter-popup .calendar-input {
-            width: 100%;
-            padding: 4px 6px;
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
-            font-size: 0.92rem;
-        }
-        .home-button {
-            margin-top: 24px;
-            text-align: center;
-        }
-        .home-button img {
-            width: 32px;
-            height: 32px;
-            transition: filter 0.2s;
-        }
-        .home-button img:hover {
-            filter: brightness(1.2) saturate(1.5);
-        }
-        @media (max-width: 1700px) {
-            .menu-container-pedidos {
-                max-width: 98vw;
-                min-width: 0;
-            }
-        }
-        @media (max-width: 900px) {
-            .menu-container-pedidos {
-                padding: 18px 4vw 18px 4vw;
-                min-width: 0;
-            }
-            .menu-title {
-                font-size: 1.5rem;
-            }
-            .pedidos-tabela th, .pedidos-tabela td {
-                padding: 6px 2px;
-            }
-        }
-        @media (max-width: 600px) {
-            .menu-container-pedidos {
-                margin: 10px 0 0 0;
-                padding: 8px 2vw 8px 2vw;
-                min-width: 0;
-            }
-            .pedidos-tabela th, .pedidos-tabela td {
-                font-size: 0.88rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="background-image"></div>
-    <div class="menu-container-pedidos">
-        <h1 class="menu-title">Meus Pedidos</h1>
-        <div style="overflow-x:auto; overflow-y: visible;">
-            <table class="pedidos-tabela" id="pedidos-tabela">
-                <thead>
-                    <tr>
-                        <th>
-                            ID
-                            <button class="sort-btn" id="sort-id-btn" title="Classificar por ID">
-                                <img src="/static/images/sort_icon.png" alt="Sort">
-                            </button>
-                        </th>
-                        <th>
-                            Nome
-                            <button class="filter-btn" data-filter="nomeFunc" title="Filtrar Nome">
-                                <img src="/static/images/filter_icon.png" alt="Filtrar">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-nomeFunc"></div>
-                        </th>
-                        <th>
-                            Entreposto
-                            <button class="filter-btn" data-filter="Entreposto" title="Filtrar Entreposto">
-                                <img src="/static/images/filter_icon.png" alt="Filtrar">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-Entreposto"></div>
-                        </th>
-                        <th>
-                            Setor
-                            <button class="filter-btn" data-filter="Setor" title="Filtrar Setor">
-                                <img src="/static/images/filter_icon.png" alt="Filtrar">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-Setor"></div>
-                        </th>
-                        <th>
-                            Impressora
-                            <button class="filter-btn" data-filter="Impressora" title="Filtrar Impressora">
-                                <img src="/static/images/filter_icon.png" alt="Filtrar">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-Impressora"></div>
-                        </th>
-                        <th>
-                            Quantidade
-                        </th>
-                        <th>
-                            Status
-                            <button class="filter-btn" data-filter="Status" title="Filtrar Status">
-                                <img src="/static/images/filter_icon.png" alt="Filtrar">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-Status"></div>
-                        </th>
-                        <th>
-                            Data do Pedido
-                            <button class="filter-btn" data-filter="data_pedido" title="Filtrar Data">
-                                <img src="/static/images/calendar_icon.png" alt="Filtrar Data">
-                            </button>
-                            <div class="filter-popup" id="filter-popup-data_pedido"></div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="pedidos-tbody">
-                    {% for pedido in pedidos %}
-                    <tr 
-                        data-id="{{ pedido.pedido_id }}"
-                        data-nomeFunc="{{ pedido.nomeFunc }}"
-                        data-Entreposto="{{ pedido.Entreposto }}"
-                        data-Setor="{{ pedido.Setor }}"
-                        data-Impressora="{{ pedido.Impressora }}"
-                        data-Status="{{ pedido.Status }}"
-                        data-data_pedido="{{ pedido.data_pedido }}"
-                    >
-                        <td>{{ pedido.pedido_id }}</td>
-                        <td>{{ pedido.nomeFunc }}</td>
-                        <td>{{ pedido.Entreposto }}</td>
-                        <td>{{ pedido.Setor }}</td>
-                        <td>{{ pedido.Impressora }}</td>
-                        <td>{{ pedido.Quantidade }}</td>
-                        <td class="status-cell status-{{ pedido.Status|lower|replace(' ', '-')|replace('ã','a')|replace('á','a')|replace('â','a')|replace('é','e')|replace('ê','e')|replace('í','i')|replace('ó','o')|replace('õ','o')|replace('ú','u')|replace('ç','c') }}">
-                            <span class="status-icon"></span>
-                            {% if pedido.Status == 'Não Enviado' %}
-                                <span>Não Enviado</span>
-                            {% elif pedido.Status == 'Enviado' %}
-                                <span>Enviado</span>
-                            {% elif pedido.Status == 'Cancelado' %}
-                                <span>Cancelado</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ pedido.data_pedido }}</td>
-                    </tr>
-                    {% endfor %}
+{% block title %}Meus Pedidos{% endblock %}
+{% block page_title %}Meus Pedidos{% endblock %}
+{% block home_link %}{{ url_for('index') }}{% endblock %}
 
-                    
-                </tbody>
-                <tbody id="ghost-rows"></tbody>
-            </table>
-        </div>
-        <div class="pagination" id="pagination"></div>
-        <div class="home-button">
-            <a href="/">
-                <img src="/static/images/home-icon.png" alt="Página Inicial">
-            </a>
-        </div>
-    </div>
-    <script>
-        // --- Paginação, Ordenação e Filtros Avançados ---
-        const rowsPerPage = 15;
-        let currentPage = 1;
-        let sortIdAsc = false;
-        let pedidos = Array.from(document.querySelectorAll('#pedidos-tbody tr'));
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        let table = $('#tabela-pedidos').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": "{{ url_for('dados_meus_pedidos') }}",
+            "columns": [
+                { "data": "pedido_id", "name": "pedido_id" },
+                { "data": "nomeFunc", "name": "nomeFunc" },
+                { "data": "Entreposto", "name": "Entreposto" },
+                { "data": "Setor", "name": "Setor" },
+                { "data": "Impressora", "name": "Impressora" },
+                { "data": "Quantidade", "name": "Quantidade" },
+                { "data": "Status", "name": "Status" },
+                { "data": "data_pedido", "name": "data_pedido" }
+            ],
+            "columnDefs": [
+                { "width": "50px", "targets": [0, 5] },
+                { "width": "120px", "targets": [6, 7] },
+                { "orderable": false, "targets": [1, 2, 3, 4, 6] }
+            ],
+            "order": [[ 0, "desc" ]],
+            "pageLength": 15,
+            "scrollY": "calc(100vh - 340px)",
+            "scrollX": false,
+            "scrollCollapse": true,
+            "language": { "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json" }
+        });
 
-        // Estado dos filtros
-        let activeFilters = {
-            nomeFunc: [],
-            Entreposto: [],
-            Setor: [],
-            Impressora: [],
-            Status: [],
-            data_pedido: null
-        };
+        // --- LÓGICA DOS FILTROS POP-UP (idêntica à de admin) ---
+        let activeFilters = {};
+        let filterOptions = {};
+        fetch("{{ url_for('get_filter_options') }}")
+            .then(response => response.json())
+            .then(data => filterOptions = data);
 
-        // Utilitário para obter valores únicos de uma coluna
-        function getUniqueValues(col) {
-            const values = pedidos.map(row => row.getAttribute('data-' + col));
-            return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-        }
-
-        // Renderiza popups de filtro
-        function renderFilterPopup(col) {
-            const popup = document.getElementById('filter-popup-' + col);
-            popup.innerHTML = '';
-            if (col === 'data_pedido') {
-                // Filtro por data
-                const input = document.createElement('input');
-                input.type = 'date';
-                input.className = 'calendar-input';
-                input.value = activeFilters.data_pedido || '';
-                input.onchange = () => {
-                    activeFilters.data_pedido = input.value;
-                };
-                popup.appendChild(input);
-                const actions = document.createElement('div');
-                actions.className = 'filter-actions';
-                actions.innerHTML = `<button type="button" onclick="applyFilter('${col}')">Filtrar</button>
-                                     <button type="button" onclick="clearFilter('${col}')">Limpar</button>`;
-                popup.appendChild(actions);
+        function renderFilterPopup(columnName) {
+            const popup = $(`#filter-popup-${columnName}`);
+            popup.empty();
+            if (columnName === 'nomeFunc') {
+                popup.append(`<h4>Pesquisar por Nome</h4>`);
+                popup.append(`<input type="text" id="search-${columnName}" value="${activeFilters[columnName] || ''}">`);
             } else {
-                // Filtro por múltipla escolha + busca
-                const search = document.createElement('input');
-                search.type = 'text';
-                search.placeholder = 'Pesquisar...';
-                popup.appendChild(search);
-
-                const optionsDiv = document.createElement('div');
-                optionsDiv.className = 'filter-options';
-                const values = getUniqueValues(col);
-                values.forEach(val => {
-                    const id = `filter-${col}-${val.replace(/\s/g, '_')}`;
-                    const label = document.createElement('label');
-                    label.innerHTML = `<input type="checkbox" value="${val}" ${activeFilters[col].includes(val) ? 'checked' : ''}> ${val}`;
-                    optionsDiv.appendChild(label);
+                popup.append(`<h4>Filtrar por ${columnName}</h4>`);
+                const optionsDiv = $('<div class="filter-options"></div>');
+                const options = filterOptions[columnName.toLowerCase() + 's'] || filterOptions[columnName.toLowerCase()];
+                options.forEach(val => {
+                    const isChecked = activeFilters[columnName] && activeFilters[columnName].includes(val);
+                    optionsDiv.append(`<label><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''}> ${val}</label>`);
                 });
-                popup.appendChild(optionsDiv);
-
-                // Busca dinâmica
-                search.oninput = () => {
-                    const term = search.value.toLowerCase();
-                    Array.from(optionsDiv.children).forEach(label => {
-                        label.style.display = label.textContent.toLowerCase().includes(term) ? '' : 'none';
-                    });
-                };
-
-                // Checkbox handler
-                optionsDiv.onchange = () => {
-                    activeFilters[col] = Array.from(optionsDiv.querySelectorAll('input:checked')).map(cb => cb.value);
-                };
-
-                const actions = document.createElement('div');
-                actions.className = 'filter-actions';
-                actions.innerHTML = `<button type="button" onclick="applyFilter('${col}')">Filtrar</button>
-                                     <button type="button" onclick="clearFilter('${col}')">Limpar</button>`;
-                popup.appendChild(actions);
+                popup.append(optionsDiv);
             }
+            popup.append(
+                `<div class="filter-actions">
+                    <button class="btn-clear" onclick="clearColumnFilter('${columnName}')">Limpar</button>
+                    <button class="btn-apply" onclick="applyColumnFilter('${columnName}')">Filtrar</button>
+                </div>`
+            );
         }
 
-        // Mostra popup de filtro
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const col = btn.getAttribute('data-filter');
-                document.querySelectorAll('.filter-popup').forEach(p => p.classList.remove('active'));
-                renderFilterPopup(col);
-                document.getElementById('filter-popup-' + col).classList.add('active');
-            });
-        });
-        // Impede que clique dentro do popup feche o filtro
-        document.querySelectorAll('.filter-popup').forEach(popup => {
-            popup.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-        });
-        // Fecha popups ao clicar fora
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.filter-popup').forEach(p => p.classList.remove('active'));
+        $('.filter-btn').on('click', function(e) {
+            e.stopPropagation();
+            const colName = $(this).data('filter');
+            $('.filter-popup').not(`#filter-popup-${colName}`).removeClass('active');
+            renderFilterPopup(colName);
+            $(`#filter-popup-${colName}`).toggleClass('active');
         });
 
-        // Aplica filtro
-        window.applyFilter = function(col) {
-            if (col === 'data_pedido') {
-                const val = document.querySelector('#filter-popup-data_pedido input').value;
-                activeFilters.data_pedido = val;
+        $(document).on('click', function() { $('.filter-popup').removeClass('active'); });
+        $('.filter-popup').on('click', function(e) { e.stopPropagation(); });
+
+        window.applyColumnFilter = function(colName) {
+            const colIndex = table.column(`${colName}:name`).index();
+            if (colName === 'nomeFunc') {
+                activeFilters[colName] = $(`#search-${colName}`).val();
+                table.column(colIndex).search(activeFilters[colName]).draw();
             } else {
-                const checked = Array.from(document.querySelectorAll(`#filter-popup-${col} input[type="checkbox"]:checked`));
-                activeFilters[col] = checked.map(cb => cb.value);
+                activeFilters[colName] = $(`#filter-popup-${colName} input:checked`).map(function() { return this.value; }).get();
+                const searchString = activeFilters[colName].map(v => `^${v}$`).join('|');
+                table.column(colIndex).search(searchString, true, false).draw();
             }
-            currentPage = 1;
-            renderTable();
-            document.getElementById('filter-popup-' + col).classList.remove('active');
-        };
-        // Limpa filtro
-        window.clearFilter = function(col) {
-            if (col === 'data_pedido') {
-                activeFilters.data_pedido = null;
-            } else {
-                activeFilters[col] = [];
-            }
-            currentPage = 1;
-            renderTable();
-            document.getElementById('filter-popup-' + col).classList.remove('active');
-        };
-
-        // Ordenação por ID
-        document.getElementById('sort-id-btn').addEventListener('click', function() {
-            sortIdAsc = !sortIdAsc;
-            renderTable();
-        });
-
-        function renderTable() {
-            // --- FILTRAGEM ---
-            let filtered = pedidos.filter(row => {
-                let match = true;
-                for (let col of ['nomeFunc','Entreposto','Setor','Impressora','Status']) {
-                    if (activeFilters[col].length &&
-                        !activeFilters[col].includes(row.getAttribute('data-' + col))) {
-                        match = false;
-                    }
-                }
-                if (activeFilters.data_pedido &&
-                    row.getAttribute('data-data_pedido') !== activeFilters.data_pedido) {
-                    match = false;
-                }
-                return match;
-            });
-
-            // Ordenação por ID
-            filtered.sort((a, b) => {
-                const idA = parseInt(a.getAttribute('data-id'));
-                const idB = parseInt(b.getAttribute('data-id'));
-                return sortIdAsc ? idA - idB : idB - idA;
-            });
-
-            // Paginação
-            const totalRows = filtered.length;
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-            if (currentPage > totalPages) currentPage = totalPages || 1;
-            const start = (currentPage - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-
-            // Renderiza linhas
-            // --- EXIBE / ESCONDE LINHAS REAIS ---
-            pedidos.forEach(row => row.style.display = 'none');
-            const pageRows = filtered.slice(start, end);
-            pageRows.forEach(row => row.style.display = '');
-
-                        // --- CRIA LINHAS FANTASMAS ---
-            const ghostTbody = document.getElementById('ghost-rows');
-            ghostTbody.innerHTML = '';                       // limpa fantasmas antigos
-            const missing = rowsPerPage - pageRows.length;   // quantas faltam
-            if (missing > 0) {
-                for (let i = 0; i < missing; i++) {
-                    const tr = document.createElement('tr');
-                    tr.style.visibility = 'hidden';
-                    tr.innerHTML = '<td colspan="8">.</td>'; // ajuste o colspan se mudar nº de colunas
-                    ghostTbody.appendChild(tr);
-                }
-            }
-
-            // Renderiza paginação
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-            if (totalPages > 1) {
-                const prevBtn = document.createElement('button');
-                prevBtn.textContent = 'Anterior';
-                prevBtn.disabled = currentPage === 1;
-                prevBtn.onclick = () => { currentPage--; renderTable(); };
-                pagination.appendChild(prevBtn);
-
-                for (let i = 1; i <= totalPages; i++) {
-                    const pageBtn = document.createElement('button');
-                    pageBtn.textContent = i;
-                    if (i === currentPage) pageBtn.classList.add('active-page');
-                    pageBtn.onclick = () => { currentPage = i; renderTable(); };
-                    pagination.appendChild(pageBtn);
-                }
-
-                const nextBtn = document.createElement('button');
-                nextBtn.textContent = 'Próxima';
-                nextBtn.disabled = currentPage === totalPages;
-                nextBtn.onclick = () => { currentPage++; renderTable(); };
-                pagination.appendChild(nextBtn);
-            }
+            $('.filter-popup').removeClass('active');
         }
 
-        // Inicializa
-        renderTable();
-    </script>
-</body>
-</html>
+        window.clearColumnFilter = function(colName) {
+            const colIndex = table.column(`${colName}:name`).index();
+            activeFilters[colName] = [];
+            table.column(colIndex).search('').draw();
+            $('.filter-popup').removeClass('active');
+        }
+    });
+</script>
+{% endblock %}

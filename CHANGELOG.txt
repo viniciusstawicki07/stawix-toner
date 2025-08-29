@@ -15,6 +15,20 @@ ________________________________________________________________________________
 
 # Changelog
 
+## [1.1.0] -
+
+### ADDED
+
+
+
+### PLANNED
+- Adicionar paginação em todas as tabelas (Meus pedidos, Adm - Pedidos e Estoque).
+- Envio de email ao clicar em "Enviar" na pagina de Adm - Pedidos.
+- Alteração no design das tabelas para melhor visualização.
+- Filtros nas tabelas.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ## [1.0.6] -
 
 ### CHANGED
@@ -33,11 +47,7 @@ ________________________________________________________________________________
     - Adicionado sistema de filtros (Nome, Entreposto, Setor, Impressora e Status).
     - Adicionado filtro por data.
 
-### PLANNED
-- Adicionar paginação em todas as tabelas (Meus pedidos, Adm - Pedidos e Estoque).
-- Envio de email ao clicar em "Enviar" na pagina de Adm - Pedidos.
-- Alteração no design das tabelas para melhor visualização.
-- Filtros nas tabelas.
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 

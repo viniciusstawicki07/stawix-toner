@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+
+    <style>
+        /* --- CONTAINER E LAYOUT GERAL --- */
+        .menu-container-pedidos {
+            width: 98%;
+            max-width: none;
+            height: calc(100vh - 40px);
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+            margin: 20px auto;
+            padding: 24px 32px;
+            background-color: #fff;
+            border-radius: 16px;
+            box-shadow: 0 6px 30px rgba(36, 88, 68, 0.12);
+        }
+        .table-wrapper {
+            flex-grow: 1;
+            overflow: hidden; /* Remove a barra de rolagem do container */
+        }
+
+        /* --- ESTILO DA TABELA DATATABLES --- */
+        table.dataTable {
+            border-collapse: collapse !important;
+            width: 100% !important; /* Força a largura total */
+        }
+        table.dataTable thead th {
+            background-color: #245844;
+            color: #fff;
+            font-weight: 500;
+            padding: 12px 15px;
+            border-bottom: 2px solid #fade3f;
+            white-space: nowrap;
+            position: relative; /* Essencial para o posicionamento dos popups */
+        }
+        table.dataTable tbody td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eef0f5;
+            color: #333;
+            font-size: 0.88rem;
+            white-space: nowrap;
+        }
+        table.dataTable tbody tr:hover {
+            background-color: #f5fafd;
+        }
+
+        /* --- ÍCONES E POP-UPS DE FILTRO --- */
+        .filter-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .filter-btn:hover {
+            opacity: 1;
+        }
+        .filter-btn img {
+            width: 16px;
+            height: 16px;
+        }
+
+        .filter-popup {
+            display: none;
+            position: absolute;
+            top: 100%; /* Posiciona abaixo do cabeçalho */
+            left: 0;
+            z-index: 100;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+            min-width: 280px;
+        }
+        .filter-popup.active {
+            display: block;
+        }
+        .filter-popup h4 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: #245844;
+            font-weight: 500;
+        }
+        .filter-popup input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .filter-popup .filter-options {
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 10px; /* Espaço para a barra de rolagem */
+        }
+        .filter-popup .filter-options label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .filter-popup .filter-actions {
+            margin-top: 15px;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .filter-popup button {
+            padding: 6px 12px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 5px;
+        }
+        .btn-apply { background-color: #245844; color: white; }
+        .btn-clear { background-color: #757575; color: white; }
+
+        /* --- BOTÕES DE AÇÃO (ADMIN) --- */
+        .action-buttons-container { display: flex; gap: 8px; }
+        .dt-button-send, .dt-button-cancel {
+            padding: 6px 12px; font-size: 0.8rem; font-weight: 500;
+            border: none; border-radius: 5px; cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .dt-button-send { background-color: #28a745; color: white; }
+        .dt-button-send:hover { background-color: #218838; transform: translateY(-1px); }
+        .dt-button-cancel { background-color: #dc3545; color: white; }
+        .dt-button-cancel:hover { background-color: #c82333; transform: translateY(-1px); }
+
+    </style>
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="menu-container-pedidos">
+        <h1 class="menu-title">{% block page_title %}{% endblock %}</h1>
+        <div class="table-wrapper">
+            <table id="tabela-pedidos" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>
+                            Nome
+                            <button class="filter-btn" data-filter="nomeFunc">
+                                <img src="/static/images/sort_icon.png" alt="Pesquisar">
+                            </button>
+                            <div class="filter-popup" id="filter-popup-nomeFunc"></div>
+                        </th>
+                        <th>
+                            Entreposto
+                            <button class="filter-btn" data-filter="Entreposto">
+                                <img src="/static/images/filter_icon.png" alt="Filtrar">
+                            </button>
+                            <div class="filter-popup" id="filter-popup-Entreposto"></div>
+                        </th>
+                        <th>
+                            Setor
+                            <button class="filter-btn" data-filter="Setor">
+                                <img src="/static/images/filter_icon.png" alt="Filtrar">
+                            </button>
+                            <div class="filter-popup" id="filter-popup-Setor"></div>
+                        </th>
+                        <th>
+                            Impressora
+                            <button class="filter-btn" data-filter="Impressora">
+                                <img src="/static/images/filter_icon.png" alt="Filtrar">
+                            </button>
+                            <div class="filter-popup" id="filter-popup-Impressora"></div>
+                        </th>
+                        <th>Qtd</th>
+                        <th>
+                            Status
+                            <button class="filter-btn" data-filter="Status">
+                                <img src="/static/images/filter_icon.png" alt="Filtrar">
+                            </button>
+                            <div class="filter-popup" id="filter-popup-Status"></div>
+                        </th>
+                        <th>Data Pedido</th>
+                        {% if is_admin %}
+                        <th>Ações</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div class="home-button">
+            <a href="{% block home_link %}{% endblock %}"><img src="/static/images/home-icon.png" alt="Página Inicial"></a>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
