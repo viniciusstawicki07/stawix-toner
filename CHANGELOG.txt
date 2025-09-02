@@ -46,6 +46,10 @@ ________________________________________________________________________________
     - Adicionado botão de Exibir resultados por Pagina.
     - Adicionado barra de pesquisa global.
 
+- Adicionado sistema de usuarios
+    - Sempre ao realizar o login, ele vai checar usuario e senha se estão corretos.
+    Caso esteja correto e seja a primeira vez que o usuario entra no sistema,
+    sera gravado na tabela 'usuarios': id, username, email e full_name.
 
 ### CHANGED
     - Alterado design das tabelas de Meus Pedidos e Pedidos Administradores.

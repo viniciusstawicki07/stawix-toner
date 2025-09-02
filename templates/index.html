@@ -36,7 +36,7 @@
             <button onclick="window.location.href='/meus_pedidos'">Meus Pedidos</button>
             <div>
                 <!-- Botão de Administração para administradores -->
-                    {% if session['user'] in ['Bruno Ricardo Marcondes', 'Acyr Giovani Martins', 'Claudiney Valente de Andrade', 'Vinicius Muller', 'Walmir Stanula'] %}
+                    {% if current_user.is_admin %}
                     <button onclick="window.location.href='/admin'">Administração</button>
                     {% endif %}
             </div>

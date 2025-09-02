@@ -150,7 +150,7 @@ function atualizarSetor() {
         <h1>Solicitar Toner</h1>
         <form id="solicitar-toner-form" action="/solicitar" method="POST">
             <label for="nome">Nome:</label>
-            <input class="input_field" type="text" id="nome" name="nome" value="{{ user }}" readonly required>
+            <input class="input_field" type="text" id="nome" name="nome" value="{{ current_user.full_name }}" readonly required>
 
             <label for="entreposto">Entreposto:</label>
             <select class="input_field" id="entreposto" name="entreposto" onchange="atualizarSetor()" required>

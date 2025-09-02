@@ -4,9 +4,22 @@ from config import get_db_connection
 from functools import wraps
 from flask_mail import Mail, Message
 from threading import Thread
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user # NOVO
+from models import User # NOVO
 
 app = Flask(__name__)
 app.secret_key = '1cd672b1fd06fe7c539aedc7913556edd47846cfa5ca237b'
+
+# --- Configuração do Flask-Login --- (NOVO)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = "Por favor, faça o login para acessar esta página."
+login_manager.login_message_category = "info"
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 # Configuração LDAP
 LDAP_SERVER = 'ldap://10.101.2.2:389'
@@ -15,7 +28,7 @@ LDAP_BIND_DN = "CN=Vinicius Muller,OU=Informatica,OU=Matriz,OU=Lapa,OU=Usuarios,
 LDAP_BIND_PASSWORD = "Vms071999"
 LDAP_USERNAME_ATTRIBUTE = "sAMAccountName"
 LDAP_USER_SEARCH_FILTER = "(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
-ADMIN_GROUP = ['Carlos R. Hoffmann', 'Bruno Ricardo Marcondes', 'Acyr Giovani Martins', 'Claudiney Valente de Andrade', 'Walmir Stanula', 'Vinicius Muller']
+ADMIN_USERNAMES = ['carlos.hoffmann', 'bruno.marcondes', 'acyr.martins', 'claudiney.andrade', 'walmir.stanula', 'vinicius.muller']
 EMAIL_ADMIN_GROUP = ['vinicius.muller@bj.coop.br']
 OU_ENTREPOSTOS_SETORES = {
     "Antonio Olinto": {"entrepostos": [8, 21], "setores": [15]},
@@ -47,49 +60,38 @@ OU_ENTREPOSTOS_SETORES = {
 # Função de autenticação via LDAP
 def authenticate(username, password):
     try:
+        # ... (conexão LDAP inicial igual)
         server = ldap3.Server(LDAP_SERVER)
         conn = ldap3.Connection(server, LDAP_BIND_DN, LDAP_BIND_PASSWORD)
+        if not conn.bind(): return None
         
-        if not conn.bind():
-            print("Erro ao conectar ao servidor LDAP.")
-            return False
+        # MODIFICADO: Adicionado sAMAccountName aos atributos
+        conn.search(LDAP_BASE_DN, f'(&(objectClass=user)(sAMAccountName={username}))', attributes=['displayName', 'mail', 'distinguishedName', 'sAMAccountName'])
 
-        search_filter = f'(&(objectClass=user)(|(sAMAccountName={username})(userPrincipalName={username})))'
-        conn.search(LDAP_BASE_DN, search_filter, attributes=['displayName', 'mail', 'distinguishedName'])
+        if not conn.entries: return None
 
-        if not conn.entries:
-            print("Usuário não encontrado.")
-            return None
-
-        user_dn = conn.entries[0].distinguishedName.value
+        user_entry = conn.entries[0]
+        user_dn = user_entry.distinguishedName.value
+        
+        # Tenta autenticar com as credenciais do usuário
         user_conn = ldap3.Connection(server, user_dn, password)
-
         if user_conn.bind():
-            display_name = conn.entries[0].displayName.value
-            email = conn.entries[0].mail.value  # Obtém o email do usuário
-            distinguished_name = conn.entries[0].distinguishedName.value
-            return display_name, email, distinguished_name
-        else:
-            print(f"Falha na autenticação para o usuário: {username}.")
-            return False
+            return {
+                "username": user_entry.sAMAccountName.value,
+                "full_name": user_entry.displayName.value,
+                "email": user_entry.mail.value,
+                "distinguished_name": user_dn
+            }
+        return None
     except Exception as e:
-        print(f"Erro na autenticação: {str(e)}")
-        return False
-
-# Função de login obrigatório
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+        print(f"Erro na autenticação LDAP: {str(e)}")
+        return None
 
 # Função de administrador obrigatório
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session or session['user'] not in ADMIN_GROUP:
+        if not current_user.is_authenticated or not current_user.is_admin:
             flash('Acesso restrito aos administradores.', 'danger')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
@@ -150,11 +152,9 @@ def get_versao():
 @app.route('/')
 @login_required
 def index():
-    print("Email do usuario:")
-    print(session['user_email'])
-    print(session['user_ou'])
     versao = get_versao()
-    return render_template('index.html', user=session['user'], versao=versao)
+    # CORREÇÃO: Não precisa mais passar 'user' para o template, o Flask-Login já disponibiliza 'current_user'
+    return render_template('index.html', versao=versao)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -162,32 +162,60 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        print(username)
+        
+        ldap_user_data = authenticate(username, password)
+        
+        if ldap_user_data:
+            # Procura ou cria o usuário no banco de dados local
+            user = User.get_by_username(ldap_user_data['username'])
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        auth_result = authenticate(username, password)
-        if auth_result:
-            full_name, email, distinguished_name = auth_result  # Captura o nome completo e o email
-            user_ou = get_user_ou(distinguished_name)
+            if user is None: # Se o usuário não existe, cria
+                is_admin = ldap_user_data['username'] in ADMIN_USERNAMES
+                cursor.execute(
+                    "INSERT INTO usuarios (username, email, full_name, is_admin) VALUES (%s, %s, %s, %s)",
+                    (ldap_user_data['username'], ldap_user_data['email'], ldap_user_data['full_name'], is_admin)
+                )
+                conn.commit()
+                user = User.get_by_username(ldap_user_data['username']) # Recarrega o usuário com o ID
+            else: # Se o usuário já existe, atualiza os dados
+                is_admin = ldap_user_data['username'] in ADMIN_USERNAMES
+                cursor.execute(
+                    "UPDATE usuarios SET email = %s, full_name = %s, is_admin = %s WHERE username = %s",
+                    (ldap_user_data['email'], ldap_user_data['full_name'], is_admin, ldap_user_data['username'])
+                )
+                conn.commit()
+                user = User.get(user.id) # Recarrega para garantir dados atualizados
+            
+            cursor.close()
+            conn.close()
 
-            session['user'] = full_name
-            session['user_email'] = email  # Armazena o email na sessão
-            session['user_ou'] = user_ou  # Armazena a OU na sessão
+            login_user(user) # Inicia a sessão com Flask-Login
+            
+            # Salva a OU na sessão, pois é específica da sessão
+            session['user_ou'] = get_user_ou(ldap_user_data['distinguished_name'])
 
             flash('Login realizado com sucesso!', 'success')
             return redirect(url_for('index'))
         else:
             flash('Credenciais inválidas. Tente novamente.', 'danger')
-            return redirect(url_for('login'))
-    
-    versao = get_versao()
-    return render_template('login.html', versao=versao)
 
+    return render_template('login.html', versao=get_versao())
+
+@app.route('/logout', methods=['GET', 'POST'])
+@login_required
+def logout():
+    logout_user()
+    flash('Logoff realizado com sucesso!', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/solicitar', methods=['GET', 'POST'])
 @login_required
 def solicitar_toner():
     user_ou = session.get('user_ou')  # Obtém a OU do usuário logado
-    is_admin = session['user'] in ADMIN_GROUP  # Verifica se o usuário é administrador
+    is_admin = current_user.is_admin  # Verifica se o usuário é administrador
 
     # Lógica de visualização de entrepostos e setores
     conn = get_db_connection()
@@ -223,8 +251,6 @@ def solicitar_toner():
     conn.close()
 
     if request.method == 'POST':
-        nome = session['user']
-        email_usuario = session['user_email']
         entreposto_id = request.form['entreposto']
 
         # Corrigido para verificar os entrepostos '01 - Sede' e '03 - Boqueirão'
@@ -258,18 +284,18 @@ def solicitar_toner():
             modelo_nome = cursor.fetchone()
             modelo_nome = modelo_nome[0] if modelo_nome else "Desconhecido"
 
-            # Inserir no banco de dados
+            # MODIFICADO: Insere o user_id em vez de nome e email
             cursor.execute('''
-                INSERT INTO pedidos (nomeFunc, entreposto_id, setor_id, impressora_id, quantidade) 
+                INSERT INTO pedidos (user_id, entreposto_id, setor_id, impressora_id, quantidade) 
                 VALUES (%s, %s, %s, %s, %s)
-            ''', (nome, entreposto_id, setor_id, modelo_id, quantidade))
+            ''', (current_user.id, entreposto_id, setor_id, modelo_id, quantidade))
             conn.commit()
 
             cursor.close()
             conn.close()
 
             # Enviar e-mail de notificação ao administrador
-            assunto_admin = 'Nova solicitação de tonner de ' + nome
+            assunto_admin = 'Nova solicitação de tonner de ' + current_user.full_name
             corpo_admin = f"""
     <html>
     <head>
@@ -336,7 +362,7 @@ def solicitar_toner():
                 <img src="https://i.imgur.com/9uWvbNC.png" alt="Logo da Empresa" width="150" height="auto">
             </div>
             <h2>Nova Solicitação de Tonner</h2>
-            <p>Um novo pedido foi feito por <strong>{nome}</strong>.</p>
+            <p>Um novo pedido foi feito por <strong>{current_user.full_name}</strong>.</p>
             
             <table>
                 <tr>
@@ -447,26 +473,24 @@ def solicitar_toner():
     </body>
     </html>
     """
-            enviar_email_assincrono(email_usuario, assunto_usuario, corpo_usuario)
+            enviar_email_assincrono(current_user.email, assunto_usuario, corpo_usuario)
 
             return redirect(url_for('index'))
         except Exception as e:
             print(f"Erro ao processar o pedido: {e}")
-            return render_template('solicitar_toner.html', user=session['user'], entrepostos_visiveis=entrepostos_visiveis, setores_visiveis=setores_visiveis, is_admin=is_admin)
+            return render_template('solicitar_toner.html', user=current_user, entrepostos_visiveis=entrepostos_visiveis, setores_visiveis=setores_visiveis, is_admin=is_admin)
 
     return render_template(
         'solicitar_toner.html',
-        user=session['user'],
         entrepostos_visiveis=entrepostos_visiveis,
         setores_visiveis=setores_visiveis,
-        is_admin=is_admin
     )
 
 @app.route('/get_setores/<int:entreposto_id>')
 @login_required
 def get_setores(entreposto_id):
     user_ou = session.get('user_ou')
-    is_admin = session['user'] in ADMIN_GROUP
+    is_admin = current_user.is_admin
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -551,44 +575,27 @@ def cancelar_pedido(pedido_id):
 
 # Rota para enviar o pedido
 @app.route('/enviar_pedido/<int:pedido_id>', methods=['POST'])
+@admin_required
 def enviar_pedido(pedido_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     try:
-        # Atualiza o status do pedido para '1' (Enviado)
         cursor.execute('UPDATE pedidos SET status_id = 1 WHERE id = %s', (pedido_id,))
         conn.commit()
 
-        # Consulta os dados do pedido para enviar o e-mail
+        # MODIFICADO: Consulta robusta usando user_id
         cursor.execute('''
-            SELECT p.nomeFunc, p.entreposto_id, p.setor_id, p.impressora_id, p.quantidade, u.email
+            SELECT u.email as email_usuario, e.entreposto, s.setor, i.impressora, p.quantidade
             FROM pedidos p
-            JOIN usuarios u ON p.nomeFunc = u.nome
+            JOIN usuarios u ON p.user_id = u.id
+            JOIN entrepostos e ON p.entreposto_id = e.id
+            JOIN setores s ON p.setor_id = s.id
+            JOIN impressoras i ON p.impressora_id = i.id
             WHERE p.id = %s
         ''', (pedido_id,))
         pedido = cursor.fetchone()
 
-        if pedido:
-            nome_usuario = pedido[0]
-            entreposto_id = pedido[1]
-            setor_id = pedido[2]
-            impressora_id = pedido[3]
-            quantidade = pedido[4]
-            email_usuario = pedido[5]
-
-            # Consultar os nomes do entreposto, setor e impressora
-            cursor.execute("SELECT entreposto FROM entrepostos WHERE id = %s", (entreposto_id,))
-            entreposto_nome = cursor.fetchone()
-            entreposto_nome = entreposto_nome[0] if entreposto_nome else "Desconhecido"
-
-            cursor.execute("SELECT setor FROM setores WHERE id = %s", (setor_id,))
-            setor_nome = cursor.fetchone()
-            setor_nome = setor_nome[0] if setor_nome else "Desconhecido"
-
-            cursor.execute("SELECT impressora FROM impressoras WHERE id = %s", (impressora_id,))
-            modelo_nome = cursor.fetchone()
-            modelo_nome = modelo_nome[0] if modelo_nome else "Desconhecido"
-
+        if pedido and pedido['email_usuario']:
             # Enviar e-mail para o usuário
             assunto_usuario = 'Seu pedido de Tonner foi enviado'
             corpo_usuario = f"""
@@ -662,19 +669,19 @@ def enviar_pedido(pedido_id):
                     <table>
                         <tr>
                             <th>Entreposto</th>
-                            <td>{entreposto_nome}</td>
+                            <td>{pedido['entreposto']}</td>
                         </tr>
                         <tr>
                             <th>Setor</th>
-                            <td>{setor_nome}</td>
+                            <td>{pedido['setor']}</td>
                         </tr>
                         <tr>
                             <th>Modelo</th>
-                            <td>{modelo_nome}</td>
+                            <td>{pedido['impressora']}</td>
                         </tr>
                         <tr>
                             <th>Quantidade</th>
-                            <td>{quantidade}</td>
+                            <td>{pedido['quantidade']}</td>
                         </tr>
                     </table>
                     
@@ -685,7 +692,7 @@ def enviar_pedido(pedido_id):
             </body>
             </html>
             """
-            enviar_email_assincrono(email_usuario, assunto_usuario, corpo_usuario)
+            enviar_email_assincrono(pedido['email_usuario'], assunto_usuario, corpo_usuario)
 
         response = {'success': True}
     except Exception as e:
@@ -715,7 +722,7 @@ def estoque():
     conn.close()
 
     # Renderiza a página estoque.html com os dados de estoque
-    return render_template('estoque.html', estoque=estoque, user=session['user'])
+    return render_template('estoque.html', estoque=estoque, user=current_user.full_name)
 
 @app.route('/adicionar_tonner', methods=['POST'])
 @login_required  # Garante que o usuário esteja logado
@@ -723,7 +730,7 @@ def adicionar_tonner():
     data = request.get_json()
     impressora = data['impressora']  # ID da impressora
     quantidade = data['quantidade']  # Quantidade a ser adicionada
-    usuario_logado = session['user']  # Nome do usuário logado
+    usuario_logado = current_user.full_name  # Nome do usuário logado
 
     # Verifica se os campos estão preenchidos
     if not impressora or not quantidade:
@@ -1043,14 +1050,6 @@ def get_filter_options():
 @login_required
 def relatorios():
     return render_template('dashboard.html')
-
-# Logout
-@app.route('/logout', methods=['POST'])
-@login_required
-def logout():
-    session.clear()
-    flash('Logoff realizado com sucesso!', 'success')
-    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True, host="localhost", port=80)
