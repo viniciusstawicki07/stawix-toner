@@ -18,38 +18,46 @@ ________________________________________________________________________________
 ## [1.1.0] -
 
 ### ADDED
+- Tabela Meus Pedidos
+    - Adicionado sistema de filtros:
+        - Ordenação por ID.
+        - Pesquisa por Nome.
+        - Filtro de seleção por entreposto.
+        - Filtro de seleção por setor.
+        - Filtro de seleção por impressoras.
+        - Ordenação por Quantidade.
+        - Filtro de seleção por Status.
+        - Filtro de data por Data.
+    - Adicionado paginação.
+    - Adicionado botão de Exibir resultados por Pagina.
+    - Adicionado barra de pesquisa global.
 
+- Tabela Pedidos Administradores
+    - Adicionado sistema de filtros:
+        - Ordenação por ID.
+        - Pesquisa por Nome.
+        - Filtro de seleção por entreposto.
+        - Filtro de seleção por setor.
+        - Filtro de seleção por impressoras.
+        - Ordenação por Quantidade.
+        - Filtro de seleção por Status.
+        - Filtro de data por Data.
+    - Adicionado paginação.
+    - Adicionado botão de Exibir resultados por Pagina.
+    - Adicionado barra de pesquisa global.
+
+
+### CHANGED
+    - Alterado design das tabelas de Meus Pedidos e Pedidos Administradores.
 
 
 ### PLANNED
-- Adicionar paginação em todas as tabelas (Meus pedidos, Adm - Pedidos e Estoque).
-- Envio de email ao clicar em "Enviar" na pagina de Adm - Pedidos.
-- Alteração no design das tabelas para melhor visualização.
-- Filtros nas tabelas.
+- Adicionar paginação em todas as tabelas (Estoque).
+- Adicionar Envio de email ao clicar em "Enviar" na pagina de Adm - Pedidos.
+- Adicionar sistema de usuarios.
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-## [1.0.6] -
-
-### CHANGED
-- Tabela "Meus Pedidos"
-    - Alterado as cores das colunas e nomes.
-    - Adicionado ícones para cada "Status".
-    - Adicionado paginação.
-    - Adicionado ordenação por ID.
-    - Adicionado sistema de filtros (Nome, Entreposto, Setor, Impressora e Status).
-    - Adicionado filtro por data.
-- Tabela "ADM - Pedidos"
-    - Alterado as cores das colunas e nomes.
-    - Adicionado ícones para cada "Status".
-    - Adicionado paginação.
-    - Adicionado ordenação por ID.
-    - Adicionado sistema de filtros (Nome, Entreposto, Setor, Impressora e Status).
-    - Adicionado filtro por data.
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ## [1.0.5] - 
 
