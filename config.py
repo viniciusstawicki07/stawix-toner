@@ -4,8 +4,8 @@ import os
 def get_db_connection():
     # Configurações de conexão com valores padrão
     db_config = {
-        #'host': os.environ.get('DB_HOST', 'mysql'), #Produção
-        'host': os.environ.get('DB_HOST', 'localhost'), # Desenvolvimento
+        'host': os.environ.get('DB_HOST', 'mysql'), #Produção
+        #'host': os.environ.get('DB_HOST', 'localhost'), # Desenvolvimento
         'user': os.environ.get('DB_USER', 'root'),
         'password': os.environ.get('DB_PASSWORD', 'Vms071999'),
         'database': os.environ.get('DB_NAME', 'tonner')
